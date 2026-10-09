@@ -1,7 +1,7 @@
 plugins {
     id "com.android.application"
     id "kotlin-android"
-    id "dev.flutter.flutter-gradle-plugin"
+    id "dev.flutter.flutter-plugin-loader"
 }
 
 android {
@@ -20,10 +20,10 @@ android {
 
     defaultConfig {
         applicationId "com.starkindustries.jarvis"
-        minSdkVersion 21
+        minSdkVersion flutter.minSdkVersion
         targetSdkVersion flutter.targetSdkVersion
-        versionCode flutterVersionCode.toInteger()
-        versionName flutterVersionName
+        versionCode 1
+        versionName "1.0.0"
     }
 
     buildTypes {
@@ -38,5 +38,6 @@ flutter {
 }
 
 dependencies {
-    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
 }
+
+
