@@ -31,7 +31,7 @@ class JarvisApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'J.A.R.V.I.S. Ultimate HUD',
+      title: 'J.A.R.V.I.S. Omni HUD',
       debugShowCheckedModeBanner: false,
       themeMode: ThemeMode.dark,
       darkTheme: ThemeData(
@@ -56,8 +56,7 @@ class AndroidNativeBridge {
 
   static Future<bool> startForegroundService() async {
     try {
-      final bool result = await _channel.invokeMethod('startForegroundService');
-      return result;
+      return await _channel.invokeMethod('startForegroundService') ?? false;
     } catch (e) {
       return false;
     }
@@ -65,8 +64,31 @@ class AndroidNativeBridge {
 
   static Future<bool> openWhatsApp(String phone, String message) async {
     try {
-      final bool result = await _channel.invokeMethod('openWhatsApp', {'phone': phone, 'message': message});
-      return result;
+      return await _channel.invokeMethod('openWhatsApp', {'phone': phone, 'message': message}) ?? false;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  static Future<bool> sendSms(String phone, String message) async {
+    try {
+      return await _channel.invokeMethod('sendSms', {'phone': phone, 'message': message}) ?? false;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  static Future<bool> openYouTube(String query) async {
+    try {
+      return await _channel.invokeMethod('openYouTube', {'query': query}) ?? false;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  static Future<bool> openMap(String query) async {
+    try {
+      return await _channel.invokeMethod('openMap', {'query': query}) ?? false;
     } catch (e) {
       return false;
     }
@@ -74,8 +96,7 @@ class AndroidNativeBridge {
 
   static Future<bool> openAppPackage(String packageName) async {
     try {
-      final bool result = await _channel.invokeMethod('openAppPackage', {'packageName': packageName});
-      return result;
+      return await _channel.invokeMethod('openAppPackage', {'packageName': packageName}) ?? false;
     } catch (e) {
       return false;
     }
@@ -112,11 +133,9 @@ class GiantArcReactorPainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeWidth = 3.5;
 
-    // Outer rings
     canvas.drawCircle(center, radius * 0.95, paintGlow);
     canvas.drawCircle(center, radius * 0.95, paintOuter);
 
-    // Rotating tech gears
     canvas.save();
     canvas.translate(center.dx, center.dy);
     canvas.rotate(animationValue * 2 * math.pi);
@@ -137,14 +156,12 @@ class GiantArcReactorPainter extends CustomPainter {
     }
     canvas.restore();
 
-    // Inner plasma ring
     final paintInner = Paint()
       ..color = Colors.blueAccent.withOpacity(0.9)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 3.0;
     canvas.drawCircle(center, radius * 0.45, paintInner);
 
-    // Center core energy
     final paintCore = Paint()
       ..color = Colors.white
       ..style = PaintingStyle.fill
@@ -158,7 +175,7 @@ class GiantArcReactorPainter extends CustomPainter {
   }
 }
 
-// --- GIANT SINGLE SCREEN HUD WITH HOLOGRAPHIC PROJECTOR ---
+// --- GIANT SINGLE SCREEN HUD WITH OMNI CONTROLS ---
 class GiantArcReactorScreen extends StatefulWidget {
   const GiantArcReactorScreen({Key? key}) : super(key: key);
 
@@ -175,15 +192,13 @@ class _GiantArcReactorScreenState extends State<GiantArcReactorScreen> with Tick
   late stt.SpeechToText _speech;
   late FlutterTts _flutterTts;
   bool _isListening = false;
-  String _lastCommand = 'JARVIS CORE STANDBY';
+  String _lastCommand = 'JARVIS OMNI CORE STANDBY';
+  String _jarvisResponse = 'All systems nominal, sir. Awaiting command.';
 
   String _geminiApiKey = '';
   List<dynamic> _installedApps = [];
   
-  // Hologram State
   bool _isHologramActive = false;
-  double _hologramScale = 1.0;
-  Offset _hologramOffset = Offset.zero;
 
   late AnimationController _reactorController;
 
@@ -258,6 +273,7 @@ class _GiantArcReactorScreenState extends State<GiantArcReactorScreen> with Tick
   }
 
   Future<void> _speak(String text) async {
+    setState(() => _jarvisResponse = text);
     await _flutterTts.speak(text);
   }
 
@@ -265,43 +281,81 @@ class _GiantArcReactorScreenState extends State<GiantArcReactorScreen> with Tick
     final lower = cmd.toLowerCase();
     setState(() => _lastCommand = cmd);
 
+    // 1. YOUTUBE VIDEO SEARCH
+    if (lower.contains('play ') || lower.contains('youtube ')) {
+      String query = lower.replaceFirst('play', '').replaceFirst('on youtube', '').replaceFirst('youtube', '').trim();
+      await _speak("Playing $query on YouTube, sir.");
+      await AndroidNativeBridge.openYouTube(query);
+      return;
+    }
+
+    // 2. MAP / LOCATION
+    if (lower.contains('map') || lower.contains('location') || lower.contains('navigate to')) {
+      String query = lower.replaceAll('open map for', '').replaceAll('navigate to', '').replaceAll('show location', '').trim();
+      await _speak("Locating $query on map, sir.");
+      await AndroidNativeBridge.openMap(query);
+      return;
+    }
+
+    // 3. WHATSAPP / MESSAGING
+    if (lower.contains('message') || lower.contains('whatsapp')) {
+      await _speak("Opening communication uplink, sir.");
+      await AndroidNativeBridge.openWhatsApp('', cmd);
+      return;
+    }
+
+    // 4. APP LAUNCHER
     if (lower.startsWith('open ')) {
       String appQuery = lower.replaceFirst('open ', '').trim();
       for (var app in _installedApps) {
         if ((app['name'] ?? '').toString().toLowerCase().contains(appQuery)) {
-          _speak("Opening ${app['name']}, sir.");
+          await _speak("Opening ${app['name']}, sir.");
           await AndroidNativeBridge.openAppPackage(app['packageName']);
           return;
         }
       }
-      _speak("Application not found, sir.");
-    } else if (lower.contains('battery')) {
-      final msg = "Battery is at $_batteryLevel percent, ${_isCharging ? 'charging' : 'discharging'}.";
-      _speak(msg);
-    } else if (lower.contains('hologram')) {
+      await _speak("Application not found, sir.");
+      return;
+    }
+
+    // 5. BATTERY STATUS
+    if (lower.contains('battery')) {
+      final msg = "Battery is at $_batteryLevel percent, ${_isCharging ? 'charging' : 'normal'}.";
+      await _speak(msg);
+      return;
+    }
+
+    // 6. HOLOGRAPHIC MATRIX
+    if (lower.contains('hologram')) {
       setState(() => _isHologramActive = true);
-      _speak("Stark Holographic Projector engaged, sir. Use air gestures to manipulate.");
-    } else if (_geminiApiKey.isNotEmpty) {
+      await _speak("Stark Holographic Matrix engaged, sir.");
+      return;
+    }
+
+    // 7. GEMINI AI (FIXED MODEL: gemini-1.5-flash)
+    if (_geminiApiKey.isNotEmpty) {
       try {
-        final url = Uri.parse('https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=$_geminiApiKey');
+        final url = Uri.parse('https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=$_geminiApiKey');
         final response = await http.post(
           url,
           headers: {'Content-Type': 'application/json'},
           body: jsonEncode({
             "contents": [{"role": "user", "parts": [{"text": cmd}]}],
-            "systemInstruction": {"parts": [{"text": "You are JARVIS, Tony Stark's advanced AI. Respond with British precision."}]}
+            "systemInstruction": {"parts": [{"text": "You are JARVIS, Tony Stark's advanced AI. Respond with British precision concisely."}]}
           }),
         );
         if (response.statusCode == 200) {
           final data = jsonDecode(response.body);
           final text = data['candidates'][0]['content']['parts'][0]['text'];
-          _speak(text);
+          await _speak(text);
+        } else {
+          await _speak("API server error occurred, sir.");
         }
       } catch (e) {
-        _speak("Neural uplink error.");
+        await _speak("Neural uplink disruption.");
       }
     } else {
-      _speak("Gemini API key not configured in settings.");
+      await _speak("Gemini API key is missing. Please enter it in settings.");
     }
   }
 
@@ -312,7 +366,7 @@ class _GiantArcReactorScreenState extends State<GiantArcReactorScreen> with Tick
       builder: (context) => AlertDialog(
         backgroundColor: const Color(0xFF0D1117),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: const BorderSide(color: Colors.cyanAccent)),
-        title: const Text('STARK CONFIGURATION', style: TextStyle(color: Colors.cyanAccent, fontSize: 14, letterSpacing: 2)),
+        title: const Text('STARK OMNI CONFIGURATION', style: TextStyle(color: Colors.cyanAccent, fontSize: 14, letterSpacing: 2)),
         content: TextField(
           controller: keyController,
           obscureText: true,
@@ -346,10 +400,8 @@ class _GiantArcReactorScreenState extends State<GiantArcReactorScreen> with Tick
       body: SafeArea(
         child: Stack(
           children: [
-            // MAIN GIANT ARC REACTOR UI
             Column(
               children: [
-                // Top Stark Status Bar
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                   child: Row(
@@ -359,7 +411,7 @@ class _GiantArcReactorScreenState extends State<GiantArcReactorScreen> with Tick
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text('J.A.R.V.I.S.', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, letterSpacing: 3, color: Colors.cyanAccent)),
-                          Text('OMEGA STARK HUD v25.0', style: TextStyle(fontSize: 9, color: Colors.cyan, letterSpacing: 1.5)),
+                          Text('OMNI STARK HUD v27.0', style: TextStyle(fontSize: 9, color: Colors.cyan, letterSpacing: 1.5)),
                         ],
                       ),
                       IconButton(
@@ -370,7 +422,6 @@ class _GiantArcReactorScreenState extends State<GiantArcReactorScreen> with Tick
                   ),
                 ),
                 const Spacer(),
-                // GIANT ARC REACTOR CENTERPIECE
                 GestureDetector(
                   onTap: _toggleListening,
                   child: AnimatedBuilder(
@@ -389,29 +440,38 @@ class _GiantArcReactorScreenState extends State<GiantArcReactorScreen> with Tick
                           ],
                         ),
                         child: CustomPaint(
-                          size: const Size(260, 260),
+                          size: const Size(240, 240),
                           painter: GiantArcReactorPainter(animationValue: _reactorController.value),
                         ),
                       );
                     },
                   ),
                 ),
-                const SizedBox(height: 30),
+                const SizedBox(height: 24),
                 Text(
                   _isListening ? 'LISTENING TO COMMAND...' : 'TAP REACTOR CORE TO ENGAGE',
                   style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: _isListening ? Colors.redAccent : Colors.cyanAccent, letterSpacing: 2),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 10),
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 30),
-                  child: Text(
-                    '"$_lastCommand"',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 13, color: Colors.white.withOpacity(0.8)),
+                  padding: const EdgeInsets.symmetric(horizontal: 25),
+                  child: Column(
+                    children: [
+                      Text(
+                        'USER: "$_lastCommand"',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(fontSize: 12, color: Colors.white.withOpacity(0.7)),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        'JARVIS: "$_jarvisResponse"',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.cyanAccent),
+                      ),
+                    ],
                   ),
                 ),
                 const Spacer(),
-                // System Metrics Bottom Bar
                 Container(
                   margin: const EdgeInsets.all(16),
                   padding: const EdgeInsets.all(16),
@@ -425,14 +485,12 @@ class _GiantArcReactorScreenState extends State<GiantArcReactorScreen> with Tick
                     children: [
                       _metricItem('BATTERY', '$_batteryLevel%', _isCharging ? 'Charging' : 'Normal'),
                       _metricItem('NETWORK', _networkStatus, 'Online'),
-                      _metricItem('QUANTUM TIME', DateFormat('hh:mm a').format(DateTime.now()), 'Synced'),
+                      _metricItem('TIME', DateFormat('hh:mm a').format(DateTime.now()), 'Synced'),
                     ],
                   ),
                 ),
               ],
             ),
-
-            // HOLOGRAPHIC PROJECTOR OVERLAY (AIR GESTURE ZOOM/PAN)
             if (_isHologramActive)
               Positioned.fill(
                 child: Container(

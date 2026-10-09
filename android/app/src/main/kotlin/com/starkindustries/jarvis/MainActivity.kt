@@ -1,6 +1,7 @@
 package com.starkindustries.jarvis
 
 import android.content.Intent
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import io.flutter.embedding.android.FlutterActivity
@@ -22,6 +23,22 @@ class MainActivity: FlutterActivity() {
                     val phone = call.argument<String>("phone") ?: ""
                     val message = call.argument<String>("message") ?: ""
                     val success = openWhatsAppIntent(phone, message)
+                    result.success(success)
+                }
+                "sendSms" -> {
+                    val phone = call.argument<String>("phone") ?: ""
+                    val message = call.argument<String>("message") ?: ""
+                    val success = sendSmsIntent(phone, message)
+                    result.success(success)
+                }
+                "openYouTube" -> {
+                    val query = call.argument<String>("query") ?: ""
+                    val success = openYouTubeSearch(query)
+                    result.success(success)
+                }
+                "openMap" -> {
+                    val query = call.argument<String>("query") ?: ""
+                    val success = openMapQuery(query)
                     result.success(success)
                 }
                 "openAppPackage" -> {
@@ -51,11 +68,12 @@ class MainActivity: FlutterActivity() {
 
     private fun openWhatsApp(phone: String, message: String): Boolean {
         return try {
-            val intent = if (phone.isNotEmpty()) {
-                Intent(Intent.ACTION_VIEW, android.net.Uri.parse("https://api.whatsapp.com/send?phone=$phone&text=${android.net.Uri.encode(message)}"))
+            val url = if (phone.isNotEmpty()) {
+                "https://api.whatsapp.com/send?phone=$phone&text=${Uri.encode(message)}"
             } else {
-                packageManager.getLaunchIntentForPackage("com.whatsapp") ?: return false
+                "https://wa.me/?text=${Uri.encode(message)}"
             }
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             startActivity(intent)
             true
@@ -64,8 +82,51 @@ class MainActivity: FlutterActivity() {
         }
     }
 
-    private fun openWhatsAppIntent(phone: String, message: String): Boolean {
-        return openWhatsApp(phone, message)
+    private fun openWhatsAppIntent(phone: String, message: String): Boolean = openWhatsApp(phone, message)
+
+    private fun sendSmsIntent(phone: String, message: String): Boolean {
+        return try {
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("sms:$phone")).apply {
+                putExtra("sms_body", message)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            startActivity(intent)
+            true
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    private fun openYouTubeSearch(query: String): Boolean {
+        return try {
+            val intent = Intent(Intent.ACTION_SEARCH).apply {
+                setPackage("com.google.android.youtube")
+                putExtra("query", query)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            try {
+                startActivity(intent)
+            } catch (e: Exception) {
+                val webIntent = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.youtube.com/results?search_query=${Uri.encode(query)}"))
+                webIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                startActivity(webIntent)
+            }
+            true
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    private fun openMapQuery(query: String): Boolean {
+        return try {
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("geo:0,0?q=${Uri.encode(query)}")).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            startActivity(intent)
+            true
+        } catch (e: Exception) {
+            false
+        }
     }
 
     private fun openAppByPackageName(packageName: String): Boolean {
