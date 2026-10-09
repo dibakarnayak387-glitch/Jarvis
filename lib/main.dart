@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:battery_plus/battery_plus.dart';
@@ -308,9 +307,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
       final connectivityResult = await (Connectivity().checkConnectivity());
       setState(() {
-        _networkStatus = connectivityResult.contains(ConnectivityResult.wifi)
+        _networkStatus = connectivityResult == ConnectivityResult.wifi
             ? 'WiFi 5GHz Quantum'
-            : connectivityResult.contains(ConnectivityResult.mobile)
+            : connectivityResult == ConnectivityResult.mobile
                 ? 'Mobile 5G Data'
                 : 'Offline';
       });
@@ -512,7 +511,7 @@ class _HomeScreenState extends State<HomeScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text('J.A.R.V.I.S.', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, letterSpacing: 2, color: Colors.cyanAccent)),
-                Text('ANDROID HUD v14.0', style: TextStyle(fontSize: 9, color: Colors.cyan300)),
+                Text('ANDROID HUD v14.0', style: TextStyle(fontSize: 9, color: Colors.cyan)),
               ],
             ),
           ],
@@ -633,7 +632,7 @@ class _HomeScreenState extends State<HomeScreen> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.between,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(title, style: const TextStyle(fontSize: 9, color: Colors.cyanAccent)),
               Icon(icon, size: 14, color: Colors.cyanAccent),
