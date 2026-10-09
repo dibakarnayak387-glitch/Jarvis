@@ -245,7 +245,7 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   int _currentIndex = 0;
   final Battery _battery = Battery();
   int _batteryLevel = 100;
@@ -255,7 +255,6 @@ class _HomeScreenState extends State<HomeScreen> {
   late stt.SpeechToText _speech;
   late FlutterTts _flutterTts;
   bool _isListening = false;
-  bool _continuousListening = true;
   String _lastWords = '';
   String _languageCode = 'en-US';
 
@@ -269,6 +268,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _initDeviceSensors();
     _initSpeechAndTts();
     _loadSettings();
@@ -278,6 +278,20 @@ class _HomeScreenState extends State<HomeScreen> {
       'text': 'JARVIS Android System online, sir. All core permissions granted.',
       'time': DateFormat('hh:mm a').format(DateTime.now()),
     });
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _speech.stop();
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
+      _stopListening();
+    }
   }
 
   Future<void> _loadSettings() async {
@@ -323,7 +337,6 @@ class _HomeScreenState extends State<HomeScreen> {
     _flutterTts = FlutterTts();
     await _flutterTts.setLanguage(_languageCode);
     await _flutterTts.setSpeechRate(1.0);
-    _startListening();
   }
 
   Future<void> _fetchInstalledApps() async {
@@ -336,11 +349,14 @@ class _HomeScreenState extends State<HomeScreen> {
   void _startListening() async {
     bool available = await _speech.initialize(
       onStatus: (status) {
-        if (status == 'notListening' && _continuousListening) {
-          _startListening();
+        if (status == 'notListening' || status == 'done') {
+          setState(() => _isListening = false);
         }
       },
-      onError: (error) => print('Speech Error: $error'),
+      onError: (error) {
+        print('Speech Error: $error');
+        setState(() => _isListening = false);
+      },
     );
     if (available) {
       setState(() => _isListening = true);
@@ -349,7 +365,8 @@ class _HomeScreenState extends State<HomeScreen> {
           setState(() {
             _lastWords = result.recognizedWords;
           });
-          if (result.finalResult || result.recognizedWords.toLowerCase().contains('hey jarvis')) {
+          if (result.finalResult && result.recognizedWords.isNotEmpty) {
+            _stopListening();
             _handleUserCommand(result.recognizedWords);
           }
         },
@@ -450,27 +467,29 @@ class _HomeScreenState extends State<HomeScreen> {
 
     final lower = command.toLowerCase();
 
-    if (lower.contains('open whatsapp')) {
-      _addJarvisMessage("Launching WhatsApp via Android Intent package com.whatsapp.");
-      _speak("Launching WhatsApp sir.");
-      await AndroidNativeBridge.openWhatsApp('', '');
-    } else if (lower.contains('open youtube')) {
-      _addJarvisMessage("Launching YouTube package com.google.android.youtube.");
-      _speak("Opening YouTube.");
-      await AndroidNativeBridge.openAppPackage("com.google.android.youtube");
-    } else if (lower.contains('open chrome')) {
-      _addJarvisMessage("Launching Google Chrome package com.android.chrome.");
-      _speak("Opening Chrome.");
-      await AndroidNativeBridge.openAppPackage("com.android.chrome");
-    } else if (lower.contains('open calculator')) {
-      _addJarvisMessage("Launching Calculator app package com.android.calculator2.");
-      _speak("Opening Calculator.");
-      await AndroidNativeBridge.openAppPackage("com.android.calculator2");
-    } else if (lower.contains('open camera')) {
-      _addJarvisMessage("Initializing Android Camera intent.");
-      _speak("Opening Camera.");
-      await AndroidNativeBridge.openAppPackage("com.android.camera2");
-    } else if (lower.contains('weather')) {
+    // DYNAMIC APP LAUNCHER (Opens any installed app like Flipkart, Instagram, WhatsApp, etc.)
+    if (lower.startsWith('open ')) {
+      String appQuery = lower.replaceFirst('open ', '').trim();
+      dynamic matchedApp;
+      for (var app in _installedApps) {
+        String name = (app['name'] ?? '').toString().toLowerCase();
+        if (name.contains(appQuery)) {
+          matchedApp = app;
+          break;
+        }
+      }
+
+      if (matchedApp != null) {
+        String appName = matchedApp['name'];
+        String pkgName = matchedApp['packageName'];
+        _addJarvisMessage("Launching $appName ($pkgName).");
+        _speak("Opening $appName, sir.");
+        await AndroidNativeBridge.openAppPackage(pkgName);
+        return;
+      }
+    }
+
+    if (lower.contains('weather')) {
       await _fetchWeather('Bhadrak');
     } else if (lower.contains('battery')) {
       final msg = "Battery level is $_batteryLevel percent, ${_isCharging ? 'charging' : 'discharging'}.";
@@ -572,13 +591,13 @@ class _HomeScreenState extends State<HomeScreen> {
                       border: Border.all(color: Colors.cyanAccent, width: 2),
                       color: Colors.cyan.withOpacity(0.1),
                     ),
-                    child: const Icon(Icons.radio, size: 50, color: Colors.cyanAccent),
+                    child: const Icon(Icons.mic_none, size: 50, color: Colors.cyanAccent),
                   ),
                 ),
                 const SizedBox(height: 16),
-                const Text('WAKE WORD ACTIVE ("HEY JARVIS")', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.cyanAccent)),
+                const Text('VOICE COMMAND HUD READY', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.cyanAccent)),
                 const SizedBox(height: 6),
-                Text('Real Android SpeechRecognizer listening...', style: TextStyle(fontSize: 10, color: Colors.cyanAccent.withOpacity(0.6))),
+                Text('Tap Voice tab or mic button to speak commands', style: TextStyle(fontSize: 10, color: Colors.cyanAccent.withOpacity(0.6))),
               ],
             ),
           ),
@@ -681,7 +700,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
           const SizedBox(height: 30),
-          Text(_isListening ? 'LISTENING TO SPEECH RECOGNIZER...' : 'TAP TO SPEAK COMMAND', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.cyanAccent)),
+          Text(_isListening ? 'LISTENING... SPEAK NOW' : 'TAP MIC TO SPEAK COMMAND', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.cyanAccent)),
           const SizedBox(height: 10),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 32.0),
