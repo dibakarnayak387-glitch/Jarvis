@@ -30,7 +30,7 @@ class JarvisApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'J.A.R.V.I.S. Android AI',
+      title: 'J.A.R.V.I.S. Advanced HUD',
       debugShowCheckedModeBanner: false,
       themeMode: ThemeMode.dark,
       darkTheme: ThemeData(
@@ -95,7 +95,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(duration: const Duration(seconds: 3), vsync: this)..repeat();
+    _controller = AnimationController(duration: const Duration(seconds: 2), vsync: this)..repeat();
     _requestPermissions();
   }
 
@@ -131,36 +131,36 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
             RotationTransition(
               turns: _controller,
               child: Container(
-                width: 120,
-                height: 120,
+                width: 130,
+                height: 130,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  border: Border.all(color: Colors.cyanAccent, width: 3),
+                  border: Border.all(color: Colors.cyanAccent, width: 4),
                   boxShadow: [
-                    BoxShadow(color: Colors.cyanAccent.withOpacity(0.5), blurRadius: 30, spreadRadius: 5),
+                    BoxShadow(color: Colors.cyanAccent.withOpacity(0.6), blurRadius: 40, spreadRadius: 8),
                   ],
                 ),
                 child: const Center(
-                  child: Icon(Icons.psychology, size: 60, color: Colors.cyanAccent),
+                  child: Icon(Icons.bolt, size: 70, color: Colors.cyanAccent),
                 ),
               ),
             ),
-            const SizedBox(height: 30),
+            const SizedBox(height: 35),
             const Text(
               'J.A.R.V.I.S.',
               style: TextStyle(
-                fontSize: 28,
+                fontSize: 30,
                 fontWeight: FontWeight.w900,
-                letterSpacing: 4.0,
+                letterSpacing: 5.0,
                 color: Colors.cyanAccent,
               ),
             ),
             const SizedBox(height: 10),
             Text(
-              'ANDROID AI UPLINK v14.0',
-              style: TextStyle(fontSize: 12, color: Colors.cyanAccent.withOpacity(0.6), letterSpacing: 2.0),
+              'STARK INDUSTRIES OMEGA v15.0',
+              style: TextStyle(fontSize: 11, color: Colors.cyanAccent.withOpacity(0.7), letterSpacing: 2.5),
             ),
-            const SizedBox(height: 40),
+            const SizedBox(height: 45),
             const CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(Colors.cyanAccent)),
           ],
         ),
@@ -183,29 +183,29 @@ class LoginScreen extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              color: const Color(0xFF0F172A).withOpacity(0.9),
-              border: Border.all(color: Colors.cyanAccent.withOpacity(0.4)),
+              color: const Color(0xFF0F172A).withOpacity(0.95),
+              border: Border.all(color: Colors.cyanAccent.withOpacity(0.5), width: 1.5),
               borderRadius: BorderRadius.circular(20),
               boxShadow: [
-                BoxShadow(color: Colors.cyanAccent.withOpacity(0.2), blurRadius: 25, spreadRadius: 2),
+                BoxShadow(color: Colors.cyanAccent.withOpacity(0.25), blurRadius: 30, spreadRadius: 3),
               ],
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.security, size: 50, color: Colors.cyanAccent),
+                const Icon(Icons.fingerprint, size: 60, color: Colors.cyanAccent),
                 const SizedBox(height: 16),
                 const Text(
-                  'BIOMETRIC AUTHENTICATION',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.cyanAccent, letterSpacing: 2),
+                  'MARK VII BIOMETRIC LOCK',
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.cyanAccent, letterSpacing: 2),
                 ),
                 const SizedBox(height: 8),
-                Text('LEVEL 10 OMEGA SECURITY', style: TextStyle(fontSize: 10, color: Colors.cyanAccent.withOpacity(0.6))),
+                Text('AUTHORIZED ACCESS ONLY', style: TextStyle(fontSize: 10, color: Colors.cyanAccent.withOpacity(0.6))),
                 const SizedBox(height: 24),
                 TextField(
                   readOnly: true,
                   decoration: const InputDecoration(
-                    labelText: 'ADMINISTRATOR',
+                    labelText: 'DESIGNATED USER',
                     labelStyle: TextStyle(color: Colors.cyanAccent),
                     enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.cyanAccent)),
                     focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.cyanAccent)),
@@ -226,7 +226,7 @@ class LoginScreen extends StatelessWidget {
                       MaterialPageRoute(builder: (context) => const HomeScreen()),
                     );
                   },
-                  child: const Text('INITIALIZE HUD', style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1.5)),
+                  child: const Text('ENGAGE HUD SYSTEM', style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1.5)),
                 ),
               ],
             ),
@@ -245,7 +245,7 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
+class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin, WidgetsBindingObserver {
   int _currentIndex = 0;
   final Battery _battery = Battery();
   int _batteryLevel = 100;
@@ -265,17 +265,20 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   List<dynamic> _installedApps = [];
   Map<String, dynamic>? _weatherData;
 
+  late AnimationController _reactorController;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _reactorController = AnimationController(duration: const Duration(seconds: 4), vsync: this)..repeat();
     _initDeviceSensors();
     _initSpeechAndTts();
     _loadSettings();
     _fetchInstalledApps();
     _chatHistory.add({
       'sender': 'jarvis',
-      'text': 'JARVIS Android System online, sir. All core permissions granted.',
+      'text': 'JARVIS Advanced Neural Net online, sir. Systems fully operational.',
       'time': DateFormat('hh:mm a').format(DateTime.now()),
     });
   }
@@ -283,6 +286,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _reactorController.dispose();
     _speech.stop();
     super.dispose();
   }
@@ -322,9 +326,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       final connectivityResult = await (Connectivity().checkConnectivity());
       setState(() {
         _networkStatus = connectivityResult == ConnectivityResult.wifi
-            ? 'WiFi 5GHz Quantum'
+            ? 'Quantum WiFi'
             : connectivityResult == ConnectivityResult.mobile
-                ? 'Mobile 5G Data'
+                ? 'Stark 5G Data'
                 : 'Offline';
       });
     } catch (e) {
@@ -401,16 +405,16 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         _addJarvisMessage(reply);
         _speak(reply);
       } else {
-        _addJarvisMessage("Unable to fetch weather data from OpenWeather server.");
+        _addJarvisMessage("Unable to fetch weather data from server.");
       }
     } catch (e) {
-      _addJarvisMessage("Weather service uplink error.");
+      _addJarvisMessage("Weather uplink error.");
     }
   }
 
   Future<void> _callGeminiApi(String prompt) async {
     if (_geminiApiKey.isEmpty) {
-      _addJarvisMessage("GEMINI_API_KEY is missing! Please enter your key in the Settings tab.");
+      _addJarvisMessage("GEMINI_API_KEY is missing! Please enter your key in Settings tab.");
       return;
     }
     try {
@@ -426,7 +430,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             }
           ],
           "systemInstruction": {
-            "parts": [{"text": "You are JARVIS, an advanced Android AI assistant created by Tony Stark. Speak professionally with British-toned precision."}]
+            "parts": [{"text": "You are JARVIS, an advanced Stark Industries AI assistant. Respond with British precision."}]
           }
         }),
       );
@@ -437,7 +441,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         _addJarvisMessage(text);
         _speak(text);
       } else {
-        _addJarvisMessage("Gemini API server connection error.");
+        _addJarvisMessage("Gemini API server error.");
       }
     } catch (e) {
       _addJarvisMessage("Neural uplink disruption.");
@@ -467,7 +471,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
     final lower = command.toLowerCase();
 
-    // DYNAMIC APP LAUNCHER (Opens any installed app like Flipkart, Instagram, WhatsApp, etc.)
+    // DYNAMIC APP LAUNCHER
     if (lower.startsWith('open ')) {
       String appQuery = lower.replaceFirst('open ', '').trim();
       dynamic matchedApp;
@@ -482,7 +486,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       if (matchedApp != null) {
         String appName = matchedApp['name'];
         String pkgName = matchedApp['packageName'];
-        _addJarvisMessage("Launching $appName ($pkgName).");
+        _addJarvisMessage("Launching $appName.");
         _speak("Opening $appName, sir.");
         await AndroidNativeBridge.openAppPackage(pkgName);
         return;
@@ -517,20 +521,23 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: const Color(0xFF0F172A).withOpacity(0.9),
+        backgroundColor: const Color(0xFF0F172A).withOpacity(0.95),
         title: Row(
           children: [
-            Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: Colors.cyanAccent)),
-              child: const Icon(Icons.bolt, size: 18, color: Colors.cyanAccent),
+            RotationTransition(
+              turns: _reactorController,
+              child: Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: Colors.cyanAccent, width: 2)),
+                child: const Icon(Icons.bolt, size: 16, color: Colors.cyanAccent),
+              ),
             ),
             const SizedBox(width: 10),
             const Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('J.A.R.V.I.S.', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, letterSpacing: 2, color: Colors.cyanAccent)),
-                Text('ANDROID HUD v14.0', style: TextStyle(fontSize: 9, color: Colors.cyan)),
+                Text('J.A.R.V.I.S.', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, letterSpacing: 2.5, color: Colors.cyanAccent)),
+                Text('ADVANCED HUD v15.0', style: TextStyle(fontSize: 9, color: Colors.cyan)),
               ],
             ),
           ],
@@ -556,7 +563,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         unselectedItemColor: Colors.grey,
         type: BottomNavigationBarType.fixed,
         items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'HUD'),
+          BottomNavigationBarItem(icon: Icon(Icons.dashboard), label: 'HUD'),
           BottomNavigationBarItem(icon: Icon(Icons.mic), label: 'Voice'),
           BottomNavigationBarItem(icon: Icon(Icons.chat), label: 'Chat'),
           BottomNavigationBarItem(icon: Icon(Icons.apps), label: 'Apps'),
@@ -571,33 +578,46 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       padding: const EdgeInsets.all(16.0),
       child: Column(
         children: [
+          // GLOWING ARC REACTOR CONTAINER
           Container(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              color: const Color(0xFF0F172A).withOpacity(0.8),
-              border: Border.all(color: Colors.cyanAccent.withOpacity(0.4)),
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [BoxShadow(color: Colors.cyanAccent.withOpacity(0.2), blurRadius: 20)],
+              color: const Color(0xFF0F172A).withOpacity(0.85),
+              border: Border.all(color: Colors.cyanAccent.withOpacity(0.5), width: 1.5),
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: [
+                BoxShadow(color: Colors.cyanAccent.withOpacity(0.25), blurRadius: 25, spreadRadius: 2),
+              ],
             ),
             child: Column(
               children: [
                 GestureDetector(
                   onTap: () => setState(() => _currentIndex = 1),
-                  child: Container(
-                    width: 100,
-                    height: 100,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.cyanAccent, width: 2),
-                      color: Colors.cyan.withOpacity(0.1),
+                  child: RotationTransition(
+                    turns: _reactorController,
+                    child: Container(
+                      width: 110,
+                      height: 110,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.cyanAccent, width: 3),
+                        gradient: RadialGradient(
+                          colors: [Colors.cyanAccent.withOpacity(0.3), Colors.blue.withOpacity(0.1)],
+                        ),
+                        boxShadow: [
+                          BoxShadow(color: Colors.cyanAccent.withOpacity(0.6), blurRadius: 35, spreadRadius: 5),
+                        ],
+                      ),
+                      child: const Center(
+                        child: Icon(Icons.psychology, size: 55, color: Colors.cyanAccent),
+                      ),
                     ),
-                    child: const Icon(Icons.mic_none, size: 50, color: Colors.cyanAccent),
                   ),
                 ),
-                const SizedBox(height: 16),
-                const Text('VOICE COMMAND HUD READY', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.cyanAccent)),
+                const SizedBox(height: 20),
+                const Text('ARC REACTOR CORE: ACTIVE', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.cyanAccent, letterSpacing: 1.5)),
                 const SizedBox(height: 6),
-                Text('Tap Voice tab or mic button to speak commands', style: TextStyle(fontSize: 10, color: Colors.cyanAccent.withOpacity(0.6))),
+                Text('Tap reactor core to initiate voice control', style: TextStyle(fontSize: 10, color: Colors.cyanAccent.withOpacity(0.6))),
               ],
             ),
           ),
@@ -610,10 +630,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             mainAxisSpacing: 12,
             childAspectRatio: 1.6,
             children: [
-              _metricCard('BATTERY MANAGER', '$_batteryLevel%', _isCharging ? 'Charging AC' : 'Discharging', Icons.battery_charging_full),
-              _metricCard('CONNECTIVITY', _networkStatus, 'Online (Active)', Icons.wifi),
-              _metricCard('AI ENGINE', 'Gemini 3 Flash', 'API Connected', Icons.psychology),
-              _metricCard('SYSTEM TIME', DateFormat('hh:mm a').format(DateTime.now()), 'Local Sync', Icons.access_time),
+              _metricCard('BATTERY CORE', '$_batteryLevel%', _isCharging ? 'Charging AC' : 'Discharging', Icons.bolt),
+              _metricCard('NETWORK UPLINK', _networkStatus, 'Online (Quantum)', Icons.wifi),
+              _metricCard('AI ENGINE', 'Gemini 3 Flash', 'Connected', Icons.memory),
+              _metricCard('QUANTUM TIME', DateFormat('hh:mm a').format(DateTime.now()), 'Synchronized', Icons.access_time),
             ],
           ),
           const SizedBox(height: 16),
@@ -685,26 +705,29 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         children: [
           GestureDetector(
             onTap: _isListening ? _stopListening : _startListening,
-            child: Container(
-              width: 140,
-              height: 140,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: _isListening ? Colors.redAccent.withOpacity(0.2) : Colors.cyan.withOpacity(0.2),
-                border: Border.all(color: _isListening ? Colors.redAccent : Colors.cyanAccent, width: 3),
-                boxShadow: [
-                  BoxShadow(color: (_isListening ? Colors.redAccent : Colors.cyanAccent).withOpacity(0.5), blurRadius: 40),
-                ],
+            child: RotationTransition(
+              turns: _reactorController,
+              child: Container(
+                width: 150,
+                height: 150,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: _isListening ? Colors.redAccent.withOpacity(0.2) : Colors.cyan.withOpacity(0.15),
+                  border: Border.all(color: _isListening ? Colors.redAccent : Colors.cyanAccent, width: 3.5),
+                  boxShadow: [
+                    BoxShadow(color: (_isListening ? Colors.redAccent : Colors.cyanAccent).withOpacity(0.6), blurRadius: 45, spreadRadius: 6),
+                  ],
+                ),
+                child: Icon(_isListening ? Icons.mic : Icons.mic_none, size: 65, color: _isListening ? Colors.redAccent : Colors.cyanAccent),
               ),
-              child: Icon(_isListening ? Icons.mic : Icons.mic_off, size: 60, color: _isListening ? Colors.redAccent : Colors.cyanAccent),
             ),
           ),
-          const SizedBox(height: 30),
-          Text(_isListening ? 'LISTENING... SPEAK NOW' : 'TAP MIC TO SPEAK COMMAND', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.cyanAccent)),
-          const SizedBox(height: 10),
+          const SizedBox(height: 35),
+          Text(_isListening ? 'LISTENING... SPEAK NOW, SIR' : 'TAP REACTOR CORE TO SPEAK', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.cyanAccent, letterSpacing: 1.5)),
+          const SizedBox(height: 12),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 32.0),
-            child: Text('"$_lastWords"', textAlign: TextAlign.center, style: TextStyle(fontSize: 12, color: Colors.white.withOpacity(0.7))),
+            child: Text('"$_lastWords"', textAlign: TextAlign.center, style: TextStyle(fontSize: 13, color: Colors.white.withOpacity(0.75))),
           ),
         ],
       ),
