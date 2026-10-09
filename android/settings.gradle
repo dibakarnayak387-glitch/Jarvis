@@ -1,0 +1,15 @@
+include ':app'
+
+localPropertiesFile = new File(rootProject.projectDir, "local.properties")
+properties = new Properties()
+if (localPropertiesFile.exists()) {
+    localPropertiesFile.withReader("UTF-8") { reader ->
+        properties.load(reader)
+    }
+}
+
+flutterSdkPath = properties.getProperty("flutter.sdk")
+assert flutterSdkPath != null, "flutter.sdk not set in local.properties"
+
+apply from: "$flutterSdkPath/packages/flutter_tools/gradle/setting_helper.gradle"
+initializeFlutterSettingFiles()

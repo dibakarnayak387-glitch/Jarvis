@@ -1,0 +1,28 @@
+name: jarvis_android_assistant
+description: J.A.R.V.I.S. Android AI Assistant built with Flutter, native Android intents, speech recognition, TTS and Gemini.
+publish_to: 'none'
+version: 1.0.0+2
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  http: ^1.2.0
+  shared_preferences: ^2.2.2
+  speech_to_text: ^6.6.1
+  flutter_tts: ^3.8.5
+  battery_plus: ^5.0.2
+  connectivity_plus: ^5.0.2
+  permission_handler: ^11.2.0
+  intl: ^0.19.0
+  cupertino_icons: ^1.0.6
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true
