@@ -43,7 +43,7 @@ class JarvisService : Service() {
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("J.A.R.V.I.S. Neural Uplink")
             .setContentText(message)
-            .setSmallIcon(android.R.drawable.ic_menu_mic)
+            .setSmallIcon(android.R.drawable.ic_dialog_info)
             .setOngoing(true)
             .build()
     }
