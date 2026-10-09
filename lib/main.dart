@@ -202,9 +202,9 @@ class LoginScreen extends StatelessWidget {
                 const SizedBox(height: 8),
                 Text('LEVEL 10 OMEGA SECURITY', style: TextStyle(fontSize: 10, color: Colors.cyanAccent.withOpacity(0.6))),
                 const SizedBox(height: 24),
-                const TextField(
+                TextField(
                   readOnly: true,
-                  decoration: InputDecoration(
+                  decoration: const InputDecoration(
                     labelText: 'ADMINISTRATOR',
                     labelStyle: TextStyle(color: Colors.cyanAccent),
                     enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.cyanAccent)),
