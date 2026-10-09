@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
@@ -17,7 +18,7 @@ void main() async {
     const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
       statusBarIconBrightness: Brightness.light,
-      systemNavigationBarColor: Color(0xFF020617),
+      systemNavigationBarColor: Color(0xFF010409),
       systemNavigationBarIconBrightness: Brightness.light,
     ),
   );
@@ -30,18 +31,18 @@ class JarvisApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'J.A.R.V.I.S. Advanced HUD',
+      title: 'J.A.R.V.I.S. Stark HUD',
       debugShowCheckedModeBanner: false,
       themeMode: ThemeMode.dark,
       darkTheme: ThemeData(
         brightness: Brightness.dark,
-        scaffoldBackgroundColor: const Color(0xFF020617),
+        scaffoldBackgroundColor: const Color(0xFF010409),
         primaryColor: Colors.cyanAccent,
         fontFamily: 'monospace',
         colorScheme: const ColorScheme.dark(
           primary: Colors.cyanAccent,
           secondary: Colors.blueAccent,
-          surface: Color(0xFF0F172A),
+          surface: Color(0xFF0D1117),
         ),
       ),
       home: const SplashScreen(),
@@ -49,7 +50,7 @@ class JarvisApp extends StatelessWidget {
   }
 }
 
-// --- ANDROID METHOD CHANNEL BRIDGE ---
+// --- ANDROID NATIVE METHOD CHANNEL ---
 class AndroidNativeBridge {
   static const MethodChannel _channel = MethodChannel('com.starkindustries.jarvis/native');
 
@@ -78,6 +79,72 @@ class AndroidNativeBridge {
     } catch (e) {
       return [];
     }
+  }
+}
+
+// --- CUSTOM ARC REACTOR PAINTER (Tony Stark Style) ---
+class ArcReactorPainter extends CustomPainter {
+  final double animationValue;
+  ArcReactorPainter({required this.animationValue});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = math.min(size.width, size.height) / 2;
+
+    final paintOuter = Paint()
+      ..color = Colors.cyanAccent.withOpacity(0.8)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.5;
+
+    final paintGlow = Paint()
+      ..color = Colors.cyan.withOpacity(0.4)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 6.0
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8);
+
+    // Draw outer pulsing rings
+    canvas.drawCircle(center, radius * 0.9, paintGlow);
+    canvas.drawCircle(center, radius * 0.9, paintOuter);
+
+    // Draw rotating tech segments
+    canvas.save();
+    canvas.translate(center.dx, center.dy);
+    canvas.rotate(animationValue * 2 * math.pi);
+
+    final paintSegments = Paint()
+      ..color = Colors.cyanAccent
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3.0;
+
+    for (int i = 0; i < 8; i++) {
+      canvas.drawArc(
+        Rect.fromCircle(center: Offset.zero, radius: radius * 0.7),
+        (i * math.pi / 4) + 0.1,
+        math.pi / 4 - 0.2,
+        false,
+        paintSegments,
+      );
+    }
+    canvas.restore();
+
+    // Inner core ring
+    final paintInner = Paint()
+      ..color = Colors.blueAccent.withOpacity(0.9)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.0;
+    canvas.drawCircle(center, radius * 0.45, paintInner);
+
+    // Center core bright spot
+    final paintCore = Paint()
+      ..color = Colors.white
+      ..style = PaintingStyle.fill;
+    canvas.drawCircle(center, radius * 0.15, paintCore);
+  }
+
+  @override
+  bool shouldRepaint(covariant ArcReactorPainter oldDelegate) {
+    return oldDelegate.animationValue != animationValue;
   }
 }
 
@@ -123,42 +190,34 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF020617),
+      backgroundColor: const Color(0xFF010409),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            RotationTransition(
-              turns: _controller,
-              child: Container(
-                width: 130,
-                height: 130,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.cyanAccent, width: 4),
-                  boxShadow: [
-                    BoxShadow(color: Colors.cyanAccent.withOpacity(0.6), blurRadius: 40, spreadRadius: 8),
-                  ],
-                ),
-                child: const Center(
-                  child: Icon(Icons.bolt, size: 70, color: Colors.cyanAccent),
-                ),
-              ),
+            AnimatedBuilder(
+              animation: _controller,
+              builder: (context, child) {
+                return CustomPaint(
+                  size: const Size(140, 140),
+                  painter: ArcReactorPainter(animationValue: _controller.value),
+                );
+              },
             ),
             const SizedBox(height: 35),
             const Text(
               'J.A.R.V.I.S.',
               style: TextStyle(
-                fontSize: 30,
+                fontSize: 32,
                 fontWeight: FontWeight.w900,
-                letterSpacing: 5.0,
+                letterSpacing: 6.0,
                 color: Colors.cyanAccent,
               ),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 8),
             Text(
-              'STARK INDUSTRIES OMEGA v15.0',
-              style: TextStyle(fontSize: 11, color: Colors.cyanAccent.withOpacity(0.7), letterSpacing: 2.5),
+              'STARK INDUSTRIES OMEGA v20.0',
+              style: TextStyle(fontSize: 11, color: Colors.cyanAccent.withOpacity(0.7), letterSpacing: 3.0),
             ),
             const SizedBox(height: 45),
             const CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(Colors.cyanAccent)),
@@ -176,18 +235,18 @@ class LoginScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF020617),
+      backgroundColor: const Color(0xFF010409),
       body: Padding(
         padding: const EdgeInsets.all(24.0),
         child: Center(
           child: Container(
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              color: const Color(0xFF0F172A).withOpacity(0.95),
+              color: const Color(0xFF0D1117).withOpacity(0.95),
               border: Border.all(color: Colors.cyanAccent.withOpacity(0.5), width: 1.5),
               borderRadius: BorderRadius.circular(20),
               boxShadow: [
-                BoxShadow(color: Colors.cyanAccent.withOpacity(0.25), blurRadius: 30, spreadRadius: 3),
+                BoxShadow(color: Colors.cyanAccent.withOpacity(0.2), blurRadius: 30, spreadRadius: 3),
               ],
             ),
             child: Column(
@@ -200,7 +259,7 @@ class LoginScreen extends StatelessWidget {
                   style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.cyanAccent, letterSpacing: 2),
                 ),
                 const SizedBox(height: 8),
-                Text('AUTHORIZED ACCESS ONLY', style: TextStyle(fontSize: 10, color: Colors.cyanAccent.withOpacity(0.6))),
+                Text('LEVEL 10 OMEGA CLEARANCE', style: TextStyle(fontSize: 10, color: Colors.cyanAccent.withOpacity(0.6))),
                 const SizedBox(height: 24),
                 TextField(
                   readOnly: true,
@@ -216,7 +275,7 @@ class LoginScreen extends StatelessWidget {
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.cyanAccent,
-                    foregroundColor: const Color(0xFF020617),
+                    foregroundColor: const Color(0xFF010409),
                     minimumSize: const Size(double.infinity, 50),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                   ),
@@ -226,7 +285,7 @@ class LoginScreen extends StatelessWidget {
                       MaterialPageRoute(builder: (context) => const HomeScreen()),
                     );
                   },
-                  child: const Text('ENGAGE HUD SYSTEM', style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1.5)),
+                  child: const Text('ENGAGE STARK HUD', style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1.5)),
                 ),
               ],
             ),
@@ -237,7 +296,7 @@ class LoginScreen extends StatelessWidget {
   }
 }
 
-// --- MAIN CONTAINER & NAVIGATION ---
+// --- MAIN STARK HUD HOME CONTAINER ---
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
 
@@ -271,14 +330,14 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin, 
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _reactorController = AnimationController(duration: const Duration(seconds: 4), vsync: this)..repeat();
+    _reactorController = AnimationController(duration: const Duration(seconds: 3), vsync: this)..repeat();
     _initDeviceSensors();
     _initSpeechAndTts();
     _loadSettings();
     _fetchInstalledApps();
     _chatHistory.add({
       'sender': 'jarvis',
-      'text': 'JARVIS Advanced Neural Net online, sir. Systems fully operational.',
+      'text': 'Stark Industries Neural Net online, sir. All tactical systems fully operational.',
       'time': DateFormat('hh:mm a').format(DateTime.now()),
     });
   }
@@ -328,7 +387,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin, 
         _networkStatus = connectivityResult == ConnectivityResult.wifi
             ? 'Quantum WiFi'
             : connectivityResult == ConnectivityResult.mobile
-                ? 'Stark 5G Data'
+                ? 'Stark 5G Uplink'
                 : 'Offline';
       });
     } catch (e) {
@@ -521,23 +580,24 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin, 
 
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: const Color(0xFF0F172A).withOpacity(0.95),
+        backgroundColor: const Color(0xFF0D1117).withOpacity(0.95),
         title: Row(
           children: [
-            RotationTransition(
-              turns: _reactorController,
-              child: Container(
-                padding: const EdgeInsets.all(4),
-                decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: Colors.cyanAccent, width: 2)),
-                child: const Icon(Icons.bolt, size: 16, color: Colors.cyanAccent),
-              ),
+            AnimatedBuilder(
+              animation: _reactorController,
+              builder: (context, child) {
+                return CustomPaint(
+                  size: const Size(28, 28),
+                  painter: ArcReactorPainter(animationValue: _reactorController.value),
+                );
+              },
             ),
-            const SizedBox(width: 10),
+            const SizedBox(width: 12),
             const Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text('J.A.R.V.I.S.', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, letterSpacing: 2.5, color: Colors.cyanAccent)),
-                Text('ADVANCED HUD v15.0', style: TextStyle(fontSize: 9, color: Colors.cyan)),
+                Text('STARK HUD v20.0', style: TextStyle(fontSize: 9, color: Colors.cyan)),
               ],
             ),
           ],
@@ -558,7 +618,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin, 
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         onTap: (index) => setState(() => _currentIndex = index),
-        backgroundColor: const Color(0xFF0F172A),
+        backgroundColor: const Color(0xFF0D1117),
         selectedItemColor: Colors.cyanAccent,
         unselectedItemColor: Colors.grey,
         type: BottomNavigationBarType.fixed,
@@ -578,46 +638,35 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin, 
       padding: const EdgeInsets.all(16.0),
       child: Column(
         children: [
-          // GLOWING ARC REACTOR CONTAINER
+          // MAIN HOLOGRAPHIC ARC REACTOR CARD
           Container(
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              color: const Color(0xFF0F172A).withOpacity(0.85),
+              color: const Color(0xFF0D1117).withOpacity(0.85),
               border: Border.all(color: Colors.cyanAccent.withOpacity(0.5), width: 1.5),
               borderRadius: BorderRadius.circular(24),
               boxShadow: [
-                BoxShadow(color: Colors.cyanAccent.withOpacity(0.25), blurRadius: 25, spreadRadius: 2),
+                BoxShadow(color: Colors.cyanAccent.withOpacity(0.2), blurRadius: 25, spreadRadius: 2),
               ],
             ),
             child: Column(
               children: [
                 GestureDetector(
                   onTap: () => setState(() => _currentIndex = 1),
-                  child: RotationTransition(
-                    turns: _reactorController,
-                    child: Container(
-                      width: 110,
-                      height: 110,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.cyanAccent, width: 3),
-                        gradient: RadialGradient(
-                          colors: [Colors.cyanAccent.withOpacity(0.3), Colors.blue.withOpacity(0.1)],
-                        ),
-                        boxShadow: [
-                          BoxShadow(color: Colors.cyanAccent.withOpacity(0.6), blurRadius: 35, spreadRadius: 5),
-                        ],
-                      ),
-                      child: const Center(
-                        child: Icon(Icons.psychology, size: 55, color: Colors.cyanAccent),
-                      ),
-                    ),
+                  child: AnimatedBuilder(
+                    animation: _reactorController,
+                    builder: (context, child) {
+                      return CustomPaint(
+                        size: const Size(120, 120),
+                        painter: ArcReactorPainter(animationValue: _reactorController.value),
+                      );
+                    },
                   ),
                 ),
                 const SizedBox(height: 20),
-                const Text('ARC REACTOR CORE: ACTIVE', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.cyanAccent, letterSpacing: 1.5)),
+                const Text('ARC REACTOR CORE: ONLINE', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.cyanAccent, letterSpacing: 1.5)),
                 const SizedBox(height: 6),
-                Text('Tap reactor core to initiate voice control', style: TextStyle(fontSize: 10, color: Colors.cyanAccent.withOpacity(0.6))),
+                Text('Tap reactor core to engage voice command center', style: TextStyle(fontSize: 10, color: Colors.cyanAccent.withOpacity(0.6))),
               ],
             ),
           ),
@@ -631,8 +680,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin, 
             childAspectRatio: 1.6,
             children: [
               _metricCard('BATTERY CORE', '$_batteryLevel%', _isCharging ? 'Charging AC' : 'Discharging', Icons.bolt),
-              _metricCard('NETWORK UPLINK', _networkStatus, 'Online (Quantum)', Icons.wifi),
-              _metricCard('AI ENGINE', 'Gemini 3 Flash', 'Connected', Icons.memory),
+              _metricCard('NETWORK UPLINK', _networkStatus, 'Active Signal', Icons.wifi),
+              _metricCard('AI ENGINE', 'Gemini 3 Flash', 'Online', Icons.memory),
               _metricCard('QUANTUM TIME', DateFormat('hh:mm a').format(DateTime.now()), 'Synchronized', Icons.access_time),
             ],
           ),
@@ -662,7 +711,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin, 
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: const Color(0xFF0F172A),
+        color: const Color(0xFF0D1117),
         border: Border.all(color: Colors.cyanAccent.withOpacity(0.3)),
         borderRadius: BorderRadius.circular(12),
       ),
@@ -688,7 +737,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin, 
   Widget _actionButton(String label, VoidCallback onPressed) {
     return ElevatedButton(
       style: ElevatedButton.styleFrom(
-        backgroundColor: const Color(0xFF0F172A),
+        backgroundColor: const Color(0xFF0D1117),
         foregroundColor: Colors.cyanAccent,
         side: BorderSide(color: Colors.cyanAccent.withOpacity(0.4)),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
@@ -705,25 +754,31 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin, 
         children: [
           GestureDetector(
             onTap: _isListening ? _stopListening : _startListening,
-            child: RotationTransition(
-              turns: _reactorController,
-              child: Container(
-                width: 150,
-                height: 150,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: _isListening ? Colors.redAccent.withOpacity(0.2) : Colors.cyan.withOpacity(0.15),
-                  border: Border.all(color: _isListening ? Colors.redAccent : Colors.cyanAccent, width: 3.5),
-                  boxShadow: [
-                    BoxShadow(color: (_isListening ? Colors.redAccent : Colors.cyanAccent).withOpacity(0.6), blurRadius: 45, spreadRadius: 6),
-                  ],
-                ),
-                child: Icon(_isListening ? Icons.mic : Icons.mic_none, size: 65, color: _isListening ? Colors.redAccent : Colors.cyanAccent),
-              ),
+            child: AnimatedBuilder(
+              animation: _reactorController,
+              builder: (context, child) {
+                return Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: (_isListening ? Colors.redAccent : Colors.cyanAccent).withOpacity(0.5),
+                        blurRadius: 50,
+                        spreadRadius: 10,
+                      ),
+                    ],
+                  ),
+                  child: CustomPaint(
+                    size: const Size(160, 160),
+                    painter: ArcReactorPainter(animationValue: _reactorController.value),
+                  ),
+                );
+              },
             ),
           ),
           const SizedBox(height: 35),
-          Text(_isListening ? 'LISTENING... SPEAK NOW, SIR' : 'TAP REACTOR CORE TO SPEAK', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.cyanAccent, letterSpacing: 1.5)),
+          Text(_isListening ? 'LISTENING TO COMMAND, SIR...' : 'TAP REACTOR TO SPEAK', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.cyanAccent, letterSpacing: 1.5)),
           const SizedBox(height: 12),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 32.0),
@@ -752,7 +807,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin, 
                   padding: const EdgeInsets.all(12),
                   constraints: const BoxConstraints(maxWidth: 280),
                   decoration: BoxDecoration(
-                    color: isUser ? Colors.cyan.withOpacity(0.2) : const Color(0xFF0F172A),
+                    color: isUser ? Colors.cyan.withOpacity(0.2) : const Color(0xFF0D1117),
                     border: Border.all(color: Colors.cyanAccent.withOpacity(0.3)),
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -771,7 +826,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin, 
         ),
         Container(
           padding: const EdgeInsets.all(8),
-          color: const Color(0xFF0F172A),
+          color: const Color(0xFF0D1117),
           child: Row(
             children: [
               Expanded(
@@ -808,7 +863,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin, 
       itemBuilder: (context, index) {
         final app = _installedApps[index];
         return Card(
-          color: const Color(0xFF0F172A),
+          color: const Color(0xFF0D1117),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10), side: BorderSide(color: Colors.cyanAccent.withOpacity(0.3))),
           child: ListTile(
             title: Text(app['name'] ?? '', style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
@@ -858,7 +913,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin, 
           ),
           const SizedBox(height: 24),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.cyanAccent, foregroundColor: const Color(0xFF020617)),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.cyanAccent, foregroundColor: const Color(0xFF010409)),
             onPressed: () async {
               final prefs = await SharedPreferences.getInstance();
               await prefs.setString('gemini_api_key', geminiController.text);
