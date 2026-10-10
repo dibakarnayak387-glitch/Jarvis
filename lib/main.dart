@@ -332,19 +332,25 @@ class _GiantArcReactorScreenState extends State<GiantArcReactorScreen> with Tick
     if (_geminiApiKey.isNotEmpty) {
       try {
         final url = Uri.parse('https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=$_geminiApiKey');
-        final response = await http.post(
-          url,
-          headers: {'Content-Type': 'application/json'},
-          body: jsonEncode({
-            "contents": [
-              {
-                "parts": [
-                  {"text": "You are JARVIS, Tony Stark's AI assistant. Answer concisely with British precision: $cmd"}
-                ]
-              }
-            ]
-          }),
-        );
+        late http.Response response;
+        for (var attempt = 0; attempt < 3; attempt++) {
+          response = await http.post(
+            url,
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({
+              "contents": [
+                {
+                  "parts": [
+                    {"text": "You are JARVIS, Tony Stark's AI assistant. Answer concisely with British precision: $cmd"}
+                  ]
+                }
+              ]
+            }),
+          );
+          final shouldRetry = [408, 429, 500, 502, 503, 504].contains(response.statusCode);
+          if (!shouldRetry || attempt == 2) break;
+          await Future.delayed(Duration(seconds: 1 << attempt));
+        }
         if (response.statusCode == 200) {
           final data = jsonDecode(response.body);
           final text = data['candidates'][0]['content']['parts'][0]['text'];
