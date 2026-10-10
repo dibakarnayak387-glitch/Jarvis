@@ -331,7 +331,7 @@ class _GiantArcReactorScreenState extends State<GiantArcReactorScreen> with Tick
     // 7. GEMINI AI GENERAL QUERIES
     if (_geminiApiKey.isNotEmpty) {
       try {
-        final url = Uri.parse('https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=$_geminiApiKey');
+        final url = Uri.parse('https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=$_geminiApiKey');
         final response = await http.post(
           url,
           headers: {'Content-Type': 'application/json'},
