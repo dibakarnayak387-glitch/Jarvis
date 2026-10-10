@@ -37,7 +37,7 @@ android {
 
     defaultConfig {
         applicationId "com.starkindustries.jarvis"
-        minSdkVersion 21
+        minSdkVersion 24
         targetSdkVersion 34
         versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName
