@@ -350,7 +350,7 @@ class _GiantArcReactorScreenState extends State<GiantArcReactorScreen> with Tick
           final text = data['candidates'][0]['content']['parts'][0]['text'];
           await _speak(text);
         } else {
-          await _speak("API server error, sir.");
+          debugPrint("Gemini API HTTP ${response.statusCode}: ${response.body}"); await _speak("API server error, sir.");
         }
       } catch (e) {
         await _speak("Neural uplink disruption.");
