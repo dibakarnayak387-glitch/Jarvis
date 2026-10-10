@@ -31,7 +31,7 @@ class JarvisApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'J.A.R.V.I.S. Omni HUD',
+      title: 'J.A.R.V.I.S. Omni Stark HUD',
       debugShowCheckedModeBanner: false,
       themeMode: ThemeMode.dark,
       darkTheme: ThemeData(
@@ -50,7 +50,7 @@ class JarvisApp extends StatelessWidget {
   }
 }
 
-// --- ANDROID NATIVE METHOD CHANNEL ---
+// --- ANDROID NATIVE BRIDGE ---
 class AndroidNativeBridge {
   static const MethodChannel _channel = MethodChannel('com.starkindustries.jarvis/native');
 
@@ -65,14 +65,6 @@ class AndroidNativeBridge {
   static Future<bool> openWhatsApp(String phone, String message) async {
     try {
       return await _channel.invokeMethod('openWhatsApp', {'phone': phone, 'message': message}) ?? false;
-    } catch (e) {
-      return false;
-    }
-  }
-
-  static Future<bool> sendSms(String phone, String message) async {
-    try {
-      return await _channel.invokeMethod('sendSms', {'phone': phone, 'message': message}) ?? false;
     } catch (e) {
       return false;
     }
@@ -112,7 +104,7 @@ class AndroidNativeBridge {
   }
 }
 
-// --- GIANT CUSTOM ARC REACTOR PAINTER ---
+// --- GIANT ARC REACTOR PAINTER ---
 class GiantArcReactorPainter extends CustomPainter {
   final double animationValue;
   GiantArcReactorPainter({required this.animationValue});
@@ -175,7 +167,7 @@ class GiantArcReactorPainter extends CustomPainter {
   }
 }
 
-// --- GIANT SINGLE SCREEN HUD WITH OMNI CONTROLS ---
+// --- MAIN OMNI SCREEN ---
 class GiantArcReactorScreen extends StatefulWidget {
   const GiantArcReactorScreen({Key? key}) : super(key: key);
 
@@ -192,13 +184,13 @@ class _GiantArcReactorScreenState extends State<GiantArcReactorScreen> with Tick
   late stt.SpeechToText _speech;
   late FlutterTts _flutterTts;
   bool _isListening = false;
-  String _lastCommand = 'JARVIS OMNI CORE STANDBY';
-  String _jarvisResponse = 'All systems nominal, sir. Awaiting command.';
+  String _lastCommand = 'JARVIS OMNI STANDBY';
+  String _jarvisResponse = 'All systems online, sir. Standing by for voice commands.';
 
   String _geminiApiKey = '';
   List<dynamic> _installedApps = [];
-  
   bool _isHologramActive = false;
+  final TextEditingController _textInputController = TextEditingController();
 
   late AnimationController _reactorController;
 
@@ -214,7 +206,6 @@ class _GiantArcReactorScreenState extends State<GiantArcReactorScreen> with Tick
     
     final prefs = await SharedPreferences.getInstance();
     _geminiApiKey = prefs.getString('gemini_api_key') ?? '';
-
     _installedApps = await AndroidNativeBridge.getInstalledApps();
 
     try {
@@ -229,7 +220,7 @@ class _GiantArcReactorScreenState extends State<GiantArcReactorScreen> with Tick
       final conn = await Connectivity().checkConnectivity();
       _networkStatus = conn == ConnectivityResult.wifi ? 'Quantum WiFi' : 'Stark 5G';
     } catch (e) {
-      print("Init error: $e");
+      print("Sensor error: $e");
     }
 
     _speech = stt.SpeechToText();
@@ -243,6 +234,7 @@ class _GiantArcReactorScreenState extends State<GiantArcReactorScreen> with Tick
   void dispose() {
     _reactorController.dispose();
     _speech.stop();
+    _textInputController.dispose();
     super.dispose();
   }
 
@@ -255,7 +247,13 @@ class _GiantArcReactorScreenState extends State<GiantArcReactorScreen> with Tick
         onStatus: (status) {
           if (status == 'notListening' || status == 'done') {
             setState(() => _isListening = false);
+            if (_lastCommand.isNotEmpty && _lastCommand != 'JARVIS OMNI STANDBY') {
+              _handleCommand(_lastCommand);
+            }
           }
+        },
+        onError: (error) {
+          setState(() => _isListening = false);
         },
       );
       if (available) {
@@ -263,9 +261,6 @@ class _GiantArcReactorScreenState extends State<GiantArcReactorScreen> with Tick
         _speech.listen(
           onResult: (result) {
             setState(() => _lastCommand = result.recognizedWords);
-            if (result.finalResult && result.recognizedWords.isNotEmpty) {
-              _handleCommand(result.recognizedWords);
-            }
           },
         );
       }
@@ -278,33 +273,34 @@ class _GiantArcReactorScreenState extends State<GiantArcReactorScreen> with Tick
   }
 
   Future<void> _handleCommand(String cmd) async {
+    if (cmd.trim().isEmpty) return;
     final lower = cmd.toLowerCase();
     setState(() => _lastCommand = cmd);
 
-    // 1. YOUTUBE VIDEO SEARCH
-    if (lower.contains('play ') || lower.contains('youtube ')) {
-      String query = lower.replaceFirst('play', '').replaceFirst('on youtube', '').replaceFirst('youtube', '').trim();
+    // 1. YOUTUBE VIDEO COMMAND ("Play [video] on YouTube")
+    if (lower.contains('play ') || lower.contains('youtube')) {
+      String query = lower.replaceAll('play', '').replaceAll('on youtube', '').replaceAll('youtube', '').trim();
       await _speak("Playing $query on YouTube, sir.");
       await AndroidNativeBridge.openYouTube(query);
       return;
     }
 
-    // 2. MAP / LOCATION
-    if (lower.contains('map') || lower.contains('location') || lower.contains('navigate to')) {
-      String query = lower.replaceAll('open map for', '').replaceAll('navigate to', '').replaceAll('show location', '').trim();
-      await _speak("Locating $query on map, sir.");
+    // 2. MAPS & LOCATION TRACKING COMMAND ("Track [location] on map")
+    if (lower.contains('map') || lower.contains('track') || lower.contains('location') || lower.contains('navigate')) {
+      String query = lower.replaceAll('open map for', '').replaceAll('track', '').replaceAll('navigate to', '').replaceAll('show location on map', '').trim();
+      await _speak("Tracking $query on Google Maps, sir.");
       await AndroidNativeBridge.openMap(query);
       return;
     }
 
-    // 3. WHATSAPP / MESSAGING
+    // 3. WHATSAPP / MESSAGING COMMAND
     if (lower.contains('message') || lower.contains('whatsapp')) {
       await _speak("Opening communication uplink, sir.");
       await AndroidNativeBridge.openWhatsApp('', cmd);
       return;
     }
 
-    // 4. APP LAUNCHER
+    // 4. APP LAUNCHER ("Open [App]")
     if (lower.startsWith('open ')) {
       String appQuery = lower.replaceFirst('open ', '').trim();
       for (var app in _installedApps) {
@@ -332,7 +328,7 @@ class _GiantArcReactorScreenState extends State<GiantArcReactorScreen> with Tick
       return;
     }
 
-    // 7. GEMINI AI (FIXED MODEL: gemini-1.5-flash)
+    // 7. GEMINI AI GENERAL QUERIES
     if (_geminiApiKey.isNotEmpty) {
       try {
         final url = Uri.parse('https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=$_geminiApiKey');
@@ -340,8 +336,13 @@ class _GiantArcReactorScreenState extends State<GiantArcReactorScreen> with Tick
           url,
           headers: {'Content-Type': 'application/json'},
           body: jsonEncode({
-            "contents": [{"role": "user", "parts": [{"text": cmd}]}],
-            "systemInstruction": {"parts": [{"text": "You are JARVIS, Tony Stark's advanced AI. Respond with British precision concisely."}]}
+            "contents": [
+              {
+                "parts": [
+                  {"text": "You are JARVIS, Tony Stark's AI assistant. Answer concisely with British precision: $cmd"}
+                ]
+              }
+            ]
           }),
         );
         if (response.statusCode == 200) {
@@ -349,13 +350,13 @@ class _GiantArcReactorScreenState extends State<GiantArcReactorScreen> with Tick
           final text = data['candidates'][0]['content']['parts'][0]['text'];
           await _speak(text);
         } else {
-          await _speak("API server error occurred, sir.");
+          await _speak("API server error, sir.");
         }
       } catch (e) {
         await _speak("Neural uplink disruption.");
       }
     } else {
-      await _speak("Gemini API key is missing. Please enter it in settings.");
+      await _speak("Gemini API key is missing. Please configure it in settings.");
     }
   }
 
@@ -366,7 +367,7 @@ class _GiantArcReactorScreenState extends State<GiantArcReactorScreen> with Tick
       builder: (context) => AlertDialog(
         backgroundColor: const Color(0xFF0D1117),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: const BorderSide(color: Colors.cyanAccent)),
-        title: const Text('STARK OMNI CONFIGURATION', style: TextStyle(color: Colors.cyanAccent, fontSize: 14, letterSpacing: 2)),
+        title: const Text('STARK CONFIGURATION', style: TextStyle(color: Colors.cyanAccent, fontSize: 14, letterSpacing: 2)),
         content: TextField(
           controller: keyController,
           obscureText: true,
@@ -400,18 +401,18 @@ class _GiantArcReactorScreenState extends State<GiantArcReactorScreen> with Tick
       body: SafeArea(
         child: Stack(
           children: [
-            Column(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                  child: Row(
+            SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       const Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text('J.A.R.V.I.S.', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, letterSpacing: 3, color: Colors.cyanAccent)),
-                          Text('OMNI STARK HUD v27.0', style: TextStyle(fontSize: 9, color: Colors.cyan, letterSpacing: 1.5)),
+                          Text('OMNI STARK HUD v29.0', style: TextStyle(fontSize: 9, color: Colors.cyan, letterSpacing: 1.5)),
                         ],
                       ),
                       IconButton(
@@ -420,106 +421,134 @@ class _GiantArcReactorScreenState extends State<GiantArcReactorScreen> with Tick
                       ),
                     ],
                   ),
-                ),
-                const Spacer(),
-                GestureDetector(
-                  onTap: _toggleListening,
-                  child: AnimatedBuilder(
-                    animation: _reactorController,
-                    builder: (context, child) {
-                      return Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: (_isListening ? Colors.redAccent : Colors.cyanAccent).withOpacity(0.6),
-                              blurRadius: 60,
-                              spreadRadius: 15,
-                            ),
-                          ],
-                        ),
-                        child: CustomPaint(
-                          size: const Size(240, 240),
-                          painter: GiantArcReactorPainter(animationValue: _reactorController.value),
-                        ),
-                      );
-                    },
+                  const SizedBox(height: 20),
+                  // GIANT ARC REACTOR
+                  GestureDetector(
+                    onTap: _toggleListening,
+                    child: AnimatedBuilder(
+                      animation: _reactorController,
+                      builder: (context, child) {
+                        return Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: (_isListening ? Colors.redAccent : Colors.cyanAccent).withOpacity(0.6),
+                                blurRadius: 60,
+                                spreadRadius: 15,
+                              ),
+                            ],
+                          ),
+                          child: CustomPaint(
+                            size: const Size(220, 220),
+                            painter: GiantArcReactorPainter(animationValue: _reactorController.value),
+                          ),
+                        );
+                      },
+                    ),
                   ),
-                ),
-                const SizedBox(height: 24),
-                Text(
-                  _isListening ? 'LISTENING TO COMMAND...' : 'TAP REACTOR CORE TO ENGAGE',
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: _isListening ? Colors.redAccent : Colors.cyanAccent, letterSpacing: 2),
-                ),
-                const SizedBox(height: 10),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 25),
-                  child: Column(
+                  const SizedBox(height: 20),
+                  Text(
+                    _isListening ? 'LISTENING TO COMMAND...' : 'TAP REACTOR CORE TO SPEAK',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: _isListening ? Colors.redAccent : Colors.cyanAccent, letterSpacing: 2),
+                  ),
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF0D1117),
+                      border: Border.all(color: Colors.cyanAccent.withOpacity(0.4)),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Column(
+                      children: [
+                        Text('USER: "$_lastCommand"', textAlign: TextAlign.center, style: TextStyle(fontSize: 12, color: Colors.white.withOpacity(0.7))),
+                        const SizedBox(height: 6),
+                        Text('JARVIS: "$_jarvisResponse"', textAlign: TextAlign.center, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.cyanAccent)),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  // DIRECT TEXT INPUT FALLBACK
+                  Row(
                     children: [
-                      Text(
-                        'USER: "$_lastCommand"',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(fontSize: 12, color: Colors.white.withOpacity(0.7)),
+                      Expanded(
+                        child: TextField(
+                          controller: _textInputController,
+                          style: const TextStyle(color: Colors.white, fontSize: 13),
+                          decoration: InputDecoration(
+                            hintText: 'Type command (e.g. Play Iron Man on YouTube)...',
+                            hintStyle: TextStyle(color: Colors.grey.withOpacity(0.7)),
+                            enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.cyanAccent.withOpacity(0.5)), borderRadius: BorderRadius.circular(10)),
+                            focusedBorder: const OutlineInputBorder(borderSide: BorderSide(color: Colors.cyanAccent), borderRadius: BorderRadius.all(Radius.circular(10))),
+                          ),
+                        ),
                       ),
-                      const SizedBox(height: 6),
-                      Text(
-                        'JARVIS: "$_jarvisResponse"',
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.cyanAccent),
+                      const SizedBox(width: 8),
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(backgroundColor: Colors.cyanAccent, foregroundColor: const Color(0xFF010409), padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16)),
+                        onPressed: () {
+                          if (_textInputController.text.isNotEmpty) {
+                            _handleCommand(_textInputController.text);
+                            _textInputController.clear();
+                          }
+                        },
+                        child: const Icon(Icons.send),
                       ),
                     ],
                   ),
-                ),
-                const Spacer(),
-                Container(
-                  margin: const EdgeInsets.all(16),
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF0D1117).withOpacity(0.9),
-                    border: Border.all(color: Colors.cyanAccent.withOpacity(0.4)),
-                    borderRadius: BorderRadius.circular(16),
+                  const SizedBox(height: 16),
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF0D1117).withOpacity(0.9),
+                      border: Border.all(color: Colors.cyanAccent.withOpacity(0.4)),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        _metricItem('BATTERY', '$_batteryLevel%', _isCharging ? 'Charging' : 'Normal'),
+                        _metricItem('NETWORK', _networkStatus, 'Online'),
+                        _metricItem('TIME', DateFormat('hh:mm a').format(DateTime.now()), 'Synced'),
+                      ],
+                    ),
                   ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      _metricItem('BATTERY', '$_batteryLevel%', _isCharging ? 'Charging' : 'Normal'),
-                      _metricItem('NETWORK', _networkStatus, 'Online'),
-                      _metricItem('TIME', DateFormat('hh:mm a').format(DateTime.now()), 'Synced'),
-                    ],
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
+            // STARK HOLOGRAPHIC MATRIX VIEWER
             if (_isHologramActive)
               Positioned.fill(
                 child: Container(
-                  color: Colors.black.withOpacity(0.85),
+                  color: Colors.black.withOpacity(0.9),
                   child: Stack(
                     children: [
                       Center(
                         child: InteractiveViewer(
                           transformationController: TransformationController(),
                           minScale: 0.5,
-                          maxScale: 5.0,
+                          maxScale: 6.0,
                           child: Container(
-                            width: 300,
-                            height: 300,
+                            width: 320,
+                            height: 320,
                             decoration: BoxDecoration(
                               border: Border.all(color: Colors.cyanAccent, width: 2),
-                              color: Colors.cyan.withOpacity(0.1),
+                              color: Colors.cyan.withOpacity(0.12),
                               boxShadow: [
-                                BoxShadow(color: Colors.cyanAccent.withOpacity(0.5), blurRadius: 30),
+                                BoxShadow(color: Colors.cyanAccent.withOpacity(0.6), blurRadius: 40),
                               ],
                             ),
                             child: const Center(
                               child: Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Icon(Icons.hexagon_outlined, size: 80, color: Colors.cyanAccent),
-                                  SizedBox(height: 10),
-                                  Text('STARK HOLOGRAPHIC MATRIX', style: TextStyle(color: Colors.cyanAccent, fontSize: 11, letterSpacing: 2)),
-                                  Text('Pinch / Drag to manipulate in air', style: TextStyle(color: Colors.grey, fontSize: 9)),
+                                  Icon(Icons.hexagon_outlined, size: 90, color: Colors.cyanAccent),
+                                  SizedBox(height: 12),
+                                  Text('STARK HOLOGRAPHIC MATRIX', style: TextStyle(color: Colors.cyanAccent, fontSize: 12, letterSpacing: 2.5, fontWeight: FontWeight.bold)),
+                                  SizedBox(height: 6),
+                                  Text('Pinch to zoom / Drag to move in air', style: TextStyle(color: Colors.grey, fontSize: 9)),
                                 ],
                               ),
                             ),
@@ -530,7 +559,7 @@ class _GiantArcReactorScreenState extends State<GiantArcReactorScreen> with Tick
                         top: 40,
                         right: 20,
                         child: IconButton(
-                          icon: const Icon(Icons.close, color: Colors.cyanAccent, size: 30),
+                          icon: const Icon(Icons.close, color: Colors.cyanAccent, size: 32),
                           onPressed: () => setState(() => _isHologramActive = false),
                         ),
                       ),
