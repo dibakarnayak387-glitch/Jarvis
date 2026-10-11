@@ -11,6 +11,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import 'package:permission_handler/permission_handler.dart';
 import 'package:intl/intl.dart';
+import 'local_qwen_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -177,6 +178,7 @@ class GiantArcReactorScreen extends StatefulWidget {
 
 class _GiantArcReactorScreenState extends State<GiantArcReactorScreen> with TickerProviderStateMixin {
   final Battery _battery = Battery();
+  final LocalQwenService _localQwen = LocalQwenService();
   int _batteryLevel = 100;
   bool _isCharging = false;
   String _networkStatus = 'Checking...';
@@ -232,6 +234,7 @@ class _GiantArcReactorScreenState extends State<GiantArcReactorScreen> with Tick
 
   @override
   void dispose() {
+    unawaited(_localQwen.dispose());
     _reactorController.dispose();
     _speech.stop();
     _textInputController.dispose();
@@ -326,6 +329,33 @@ class _GiantArcReactorScreenState extends State<GiantArcReactorScreen> with Tick
       setState(() => _isHologramActive = true);
       await _speak("Stark Holographic Matrix engaged, sir.");
       return;
+    }
+
+    // 7. LOCAL QWEN OFFLINE AI
+    if (lower == 'load qwen' ||
+        lower == 'load offline model' ||
+        lower == 'open local ai') {
+      await _speak("Please select the Qwen GGUF model file, sir.");
+      try {
+        final loaded = await _localQwen.loadModel();
+        if (loaded) {
+          await _speak("Offline Qwen model loaded, sir.");
+        } else {
+          await _speak("Model selection cancelled, sir.");
+        }
+      } catch (e) {
+        debugPrint("Qwen load error: $e");
+        await _speak("Unable to load offline Qwen model, sir.");
+      }
+      return;
+    }
+
+    if (_localQwen.isLoaded) {
+      final localReply = await _localQwen.answer(cmd);
+      if (localReply != null && localReply.isNotEmpty) {
+        await _speak(localReply);
+        return;
+      }
     }
 
     // 7. GEMINI AI GENERAL QUERIES
