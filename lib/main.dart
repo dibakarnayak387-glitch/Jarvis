@@ -345,7 +345,10 @@ class _GiantArcReactorScreenState extends State<GiantArcReactorScreen> with Tick
         }
       } catch (e) {
         debugPrint("Qwen load error: $e");
-        await _speak("Unable to load offline Qwen model, sir.");
+        final errorText = e.toString();
+        final shortError = errorText.substring(
+          0, errorText.length > 180 ? 180 : errorText.length);
+        await _speak("Qwen error: $shortError");
       }
       return;
     }
