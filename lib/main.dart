@@ -373,6 +373,28 @@ class _GiantArcReactorScreenState extends State<GiantArcReactorScreen> with Tick
     final lower = cmd.toLowerCase();
     setState(() => _lastCommand = cmd);
 
+    // Direct hologram commands must run before app/API routing.
+    if (lower.contains('load photo') ||
+        lower.contains('choose photo') ||
+        lower.contains('select photo') ||
+        lower.contains('open gallery')) {
+      await _pickHologramPhoto();
+      return;
+    }
+
+    if (lower.contains('hologram')) {
+      if (lower.contains('close') ||
+          lower.contains('hide') ||
+          lower.contains('off')) {
+        setState(() => _isHologramActive = false);
+        await _speak("Holographic matrix disengaged, sir.");
+      } else {
+        setState(() => _isHologramActive = true);
+        await _speak("Holographic matrix engaged, sir.");
+      }
+      return;
+    }
+
     // 1. YOUTUBE VIDEO COMMAND ("Play [video] on YouTube")
     if (lower.contains('play ') || lower.contains('youtube')) {
       String query = lower.replaceAll('play', '').replaceAll('on youtube', '').replaceAll('youtube', '').trim();
@@ -417,61 +439,6 @@ class _GiantArcReactorScreenState extends State<GiantArcReactorScreen> with Tick
       return;
     }
 
-    // 6. HOLOGRAM VOICE CONTROLS
-    if (lower.contains('hologram')) {
-      if (lower.contains('close') || lower.contains('hide') || lower.contains('off')) {
-        setState(() => _isHologramActive = false);
-        await _speak("Holographic matrix disengaged, sir.");
-      } else if (lower.contains('left')) {
-        setState(() {
-          _isHologramActive = true;
-          _hologramX -= 40;
-        });
-        await _speak("Moving hologram left, sir.");
-      } else if (lower.contains('right')) {
-        setState(() {
-          _isHologramActive = true;
-          _hologramX += 40;
-        });
-        await _speak("Moving hologram right, sir.");
-      } else if (lower.contains('up')) {
-        setState(() {
-          _isHologramActive = true;
-          _hologramY -= 40;
-        });
-        await _speak("Moving hologram up, sir.");
-      } else if (lower.contains('down')) {
-        setState(() {
-          _isHologramActive = true;
-          _hologramY += 40;
-        });
-        await _speak("Moving hologram down, sir.");
-      } else if (lower.contains('bigger') || lower.contains('zoom in') || lower.contains('enlarge')) {
-        setState(() {
-          _isHologramActive = true;
-          _hologramScale = (_hologramScale + 0.2).clamp(0.5, 3.0);
-        });
-        await _speak("Increasing hologram scale, sir.");
-      } else if (lower.contains('smaller') || lower.contains('zoom out') || lower.contains('shrink')) {
-        setState(() {
-          _isHologramActive = true;
-          _hologramScale = (_hologramScale - 0.2).clamp(0.5, 3.0);
-        });
-        await _speak("Reducing hologram scale, sir.");
-      } else if (lower.contains('reset')) {
-        setState(() {
-          _isHologramActive = true;
-          _hologramX = 0;
-          _hologramY = 0;
-          _hologramScale = 1.0;
-        });
-        await _speak("Hologram position and scale reset, sir.");
-      } else {
-        setState(() => _isHologramActive = true);
-        await _speak("Stark Holographic Matrix engaged, sir.");
-      }
-      return;
-    }
 
     // 7. LOCAL QWEN OFFLINE AI
     if (lower == 'load qwen' ||
