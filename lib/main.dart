@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
+import 'dart:io';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
@@ -192,6 +194,7 @@ class _GiantArcReactorScreenState extends State<GiantArcReactorScreen> with Tick
   String _geminiApiKey = '';
   List<dynamic> _installedApps = [];
   bool _isHologramActive = false;
+  String? _hologramImagePath;
   double _hologramScale = 1.0;
   double _hologramX = 0.0;
   double _hologramY = 0.0;
@@ -339,6 +342,24 @@ class _GiantArcReactorScreenState extends State<GiantArcReactorScreen> with Tick
       _lastCommand = '';
       _commandHandled = false;
       await _startListening();
+    }
+  }
+
+  Future<void> _pickHologramPhoto() async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.image,
+      );
+      if (result == null || result.files.single.path == null) return;
+      if (!mounted) return;
+      setState(() {
+        _hologramImagePath = result.files.single.path;
+        _isHologramActive = true;
+      });
+      await _speak("Hologram photo loaded, sir.");
+    } catch (e) {
+      debugPrint("Hologram photo error: $e");
+      await _speak("Unable to load hologram photo, sir.");
     }
   }
 
@@ -703,18 +724,45 @@ class _GiantArcReactorScreenState extends State<GiantArcReactorScreen> with Tick
                                 BoxShadow(color: Colors.cyanAccent.withOpacity(0.6), blurRadius: 40),
                               ],
                             ),
-                            child: const Center(
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(Icons.hexagon_outlined, size: 90, color: Colors.cyanAccent),
-                                  SizedBox(height: 12),
-                                  Text('STARK HOLOGRAPHIC MATRIX', style: TextStyle(color: Colors.cyanAccent, fontSize: 12, letterSpacing: 2.5, fontWeight: FontWeight.bold)),
-                                  SizedBox(height: 6),
-                                  Text('Pinch to zoom / Drag to move in air', style: TextStyle(color: Colors.grey, fontSize: 9)),
-                                ],
-                              ),
-                            ),
+                            child: _hologramImagePath == null
+                                ? Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      const Icon(Icons.hexagon_outlined, size: 90, color: Colors.cyanAccent),
+                                      const SizedBox(height: 12),
+                                      const Text('STARK HOLOGRAPHIC MATRIX', style: TextStyle(color: Colors.cyanAccent, fontSize: 12, letterSpacing: 2.5, fontWeight: FontWeight.bold)),
+                                      const SizedBox(height: 6),
+                                      const Text('Pinch to zoom / Drag to move', style: TextStyle(color: Colors.grey, fontSize: 9)),
+                                      const SizedBox(height: 14),
+                                      ElevatedButton.icon(
+                                        onPressed: _pickHologramPhoto,
+                                        icon: const Icon(Icons.photo_library),
+                                        label: const Text('LOAD PHOTO'),
+                                      ),
+                                    ],
+                                  )
+                                : Stack(
+                                    fit: StackFit.expand,
+                                    children: [
+                                      Image.file(
+                                        File(_hologramImagePath!),
+                                        fit: BoxFit.contain,
+                                        errorBuilder: (context, error, stack) => const Center(
+                                          child: Text('Unable to display photo', style: TextStyle(color: Colors.cyanAccent)),
+                                        ),
+                                      ),
+                                      Positioned(
+                                        left: 8,
+                                        right: 8,
+                                        bottom: 8,
+                                        child: ElevatedButton.icon(
+                                          onPressed: _pickHologramPhoto,
+                                          icon: const Icon(Icons.photo_library),
+                                          label: const Text('CHANGE PHOTO'),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                               ),
                             ),
                           ),
