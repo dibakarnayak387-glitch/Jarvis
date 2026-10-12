@@ -244,32 +244,101 @@ class _GiantArcReactorScreenState extends State<GiantArcReactorScreen> with Tick
     super.dispose();
   }
 
-  void _toggleListening() async {
-    if (_isListening) {
-      _speech.stop();
-      setState(() => _isListening = false);
-    } else {
-      bool available = await _speech.initialize(
-        onStatus: (status) {
-          if (status == 'notListening' || status == 'done') {
-            setState(() => _isListening = false);
-            if (_lastCommand.isNotEmpty && _lastCommand != 'JARVIS OMNI STANDBY') {
-              _handleCommand(_lastCommand);
-            }
-          }
-        },
-        onError: (error) {
+  bool _continuousListening = false;
+  bool _handlingCommand = false;
+
+  bool _commandHandled = false;
+  bool _listeningRestartScheduled = false;
+
+  Future<void> _startListening() async {
+    if (!mounted ||
+        !_continuousListening ||
+        _speech.isListening ||
+        _handlingCommand) {
+      return;
+    }
+
+    final available = await _speech.initialize(
+      onStatus: (status) async {
+        if (!mounted) return;
+
+        if (status == 'notListening' || status == 'done') {
           setState(() => _isListening = false);
-        },
-      );
-      if (available) {
-        setState(() => _isListening = true);
-        _speech.listen(
-          onResult: (result) {
-            setState(() => _lastCommand = result.recognizedWords);
-          },
-        );
+
+          final command = _lastCommand.trim();
+          if (_continuousListening &&
+              !_handlingCommand &&
+              !_commandHandled &&
+              command.isNotEmpty &&
+              command != 'JARVIS OMNI STANDBY') {
+            _commandHandled = true;
+            _handlingCommand = true;
+
+            try {
+              await _handleCommand(command);
+            } finally {
+              _handlingCommand = false;
+              _lastCommand = '';
+              if (mounted && _continuousListening) {
+                await Future.delayed(const Duration(milliseconds: 600));
+                _scheduleListeningRestart();
+              }
+            }
+          } else if (_continuousListening && !_handlingCommand) {
+            _lastCommand = '';
+            _scheduleListeningRestart();
+          }
+        }
+      },
+      onError: (error) {
+        if (mounted) setState(() => _isListening = false);
+        if (_continuousListening && !_handlingCommand) {
+          _scheduleListeningRestart(delayMs: 900);
+        }
+      },
+    );
+
+    if (!mounted || !_continuousListening || !available) return;
+
+    _lastCommand = '';
+    _commandHandled = false;
+    setState(() => _isListening = true);
+
+    await _speech.listen(
+      onResult: (result) {
+        if (!mounted) return;
+        setState(() => _lastCommand = result.recognizedWords);
+      },
+    );
+  }
+
+  void _scheduleListeningRestart({int delayMs = 400}) {
+    if (_listeningRestartScheduled ||
+        !mounted ||
+        !_continuousListening ||
+        _handlingCommand) {
+      return;
+    }
+
+    _listeningRestartScheduled = true;
+    Future.delayed(Duration(milliseconds: delayMs), () async {
+      _listeningRestartScheduled = false;
+      if (mounted && _continuousListening && !_speech.isListening) {
+        await _startListening();
       }
+    });
+  }
+
+  void _toggleListening() async {
+    if (_continuousListening) {
+      _continuousListening = false;
+      await _speech.stop();
+      if (mounted) setState(() => _isListening = false);
+    } else {
+      _continuousListening = true;
+      _lastCommand = '';
+      _commandHandled = false;
+      await _startListening();
     }
   }
 
