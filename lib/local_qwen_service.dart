@@ -13,8 +13,7 @@ class LocalQwenService {
     }
 
     final result = await FilePicker.platform.pickFiles(
-      type: FileType.custom,
-      allowedExtensions: ['gguf'],
+      type: FileType.any,
       allowMultiple: false,
     );
 
