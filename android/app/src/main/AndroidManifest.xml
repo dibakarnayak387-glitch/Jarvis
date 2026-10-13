@@ -13,7 +13,7 @@
     <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" />
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW"/>
 
-    <application
+    <application android:usesCleartextTraffic="true"
         android:label="J.A.R.V.I.S."
         android:name="${applicationName}">
         
