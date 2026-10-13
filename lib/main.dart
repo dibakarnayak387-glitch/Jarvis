@@ -6,6 +6,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:camera/camera.dart';
 import 'package:hand_landmarker/hand_landmarker.dart' as hand;
 import 'package:flutter/material.dart';
+import 'package:flutter_3d_controller/flutter_3d_controller.dart';
 import 'package:flutter/services.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:flutter_tts/flutter_tts.dart';
@@ -203,6 +204,9 @@ class _GiantArcReactorScreenState extends State<GiantArcReactorScreen> with Tick
 
   bool _isHologramActive = false;
   String? _hologramImagePath;
+  String? _hologramModelPath;
+  bool _show3DModel = false;
+  final Flutter3DController _hologram3DController = Flutter3DController();
   double _hologramScale = 1.0;
   double _hologramX = 0.0;
   double _hologramY = 0.0;
@@ -458,6 +462,37 @@ class _GiantArcReactorScreenState extends State<GiantArcReactorScreen> with Tick
     }
   }
 
+  Future<void> _pickHologramModel() async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.any,
+      );
+
+      if (result == null || result.files.single.path == null) return;
+
+      final path = result.files.single.path!;
+      final lowerPath = path.toLowerCase();
+
+      if (!lowerPath.endsWith('.glb') &&
+          !lowerPath.endsWith('.gltf')) {
+        await _speak("Please select a GLB or GLTF 3D model, sir.");
+        return;
+      }
+
+      if (!mounted) return;
+      setState(() {
+        _hologramModelPath = path;
+        _show3DModel = true;
+        _isHologramActive = true;
+      });
+
+      await _speak("3D hologram model selected, sir.");
+    } catch (e) {
+      debugPrint("3D hologram picker error: $e");
+      await _speak("Unable to select the 3D model, sir.");
+    }
+  }
+
   Future<void> _pickHologramPhoto() async {
     try {
       final result = await FilePicker.platform.pickFiles(
@@ -493,6 +528,14 @@ class _GiantArcReactorScreenState extends State<GiantArcReactorScreen> with Tick
         lower.contains('select photo') ||
         lower.contains('open gallery')) {
       await _pickHologramPhoto();
+      return;
+    }
+
+    if (lower.contains('load 3d model') ||
+        lower.contains('open 3d model') ||
+        lower.contains('choose 3d model') ||
+        lower.contains('select 3d model')) {
+      await _pickHologramModel();
       return;
     }
 
@@ -782,7 +825,66 @@ class _GiantArcReactorScreenState extends State<GiantArcReactorScreen> with Tick
                 ],
               ),
             ),
-            // STARK HOLOGRAPHIC MATRIX VIEWER
+            // STARK 3D HOLOGRAM VIEWER
+  if (_isHologramActive && _show3DModel && _hologramModelPath != null)
+    Positioned.fill(
+      child: Container(
+        color: const Color(0xEE010409),
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: Flutter3DViewer(
+                key: ValueKey(_hologramModelPath),
+                controller: _hologram3DController,
+                src: _hologramModelPath!,
+                activeGestureInterceptor: true,
+                enableTouch: true,
+                progressBarColor: Colors.cyan,
+                onProgress: (value) {
+                  debugPrint("3D model loading: $value");
+                },
+                onLoad: (address) {
+                  debugPrint("3D model loaded: $address");
+                },
+                onError: (error) {
+                  debugPrint("3D model error: $error");
+                  _speak("3D model failed to load, sir.");
+                },
+              ),
+            ),
+            Positioned(
+              top: 42,
+              left: 18,
+              child: Text(
+                "STARK 3D HOLOGRAM",
+                style: TextStyle(
+                  color: Colors.cyanAccent,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 2,
+                ),
+              ),
+            ),
+            Positioned(
+              top: 30,
+              right: 16,
+              child: IconButton(
+                tooltip: "Close 3D hologram",
+                icon: Icon(Icons.close, color: Colors.cyanAccent, size: 30),
+                onPressed: () async {
+                  setState(() {
+                    _show3DModel = false;
+                    _isHologramActive = false;
+                  });
+                  await _stopHandTracking();
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+
+  // STARK HOLOGRAPHIC MATRIX VIEWER
             if (_isHologramActive)
               Positioned.fill(
                 child: Container(
