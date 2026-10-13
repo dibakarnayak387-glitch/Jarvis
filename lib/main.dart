@@ -3,6 +3,8 @@ import 'dart:convert';
 import 'dart:math' as math;
 import 'dart:io';
 import 'package:file_picker/file_picker.dart';
+import 'package:camera/camera.dart';
+import 'package:hand_landmarker/hand_landmarker.dart' as hand;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
@@ -193,6 +195,12 @@ class _GiantArcReactorScreenState extends State<GiantArcReactorScreen> with Tick
 
   String _geminiApiKey = '';
   List<dynamic> _installedApps = [];
+  CameraController? _handCamera;
+  hand.HandLandmarkerPlugin? _handDetector;
+  bool _handTracking = false;
+  bool _processingHandFrame = false;
+  double _lastPinchDistance = 0.0;
+
   bool _isHologramActive = false;
   String? _hologramImagePath;
   double _hologramScale = 1.0;
@@ -238,8 +246,113 @@ class _GiantArcReactorScreenState extends State<GiantArcReactorScreen> with Tick
     setState(() {});
   }
 
+
+  Future<void> _startHandTracking() async {
+    if (_handTracking) return;
+
+    try {
+      final cameras = await availableCameras();
+      if (cameras.isEmpty) {
+        await _speak("No camera available, sir.");
+        return;
+      }
+
+      final camera = cameras.firstWhere(
+        (c) => c.lensDirection == CameraLensDirection.front,
+        orElse: () => cameras.first,
+      );
+
+      final detector = await hand.HandLandmarkerPlugin.create();
+      final controller = CameraController(
+        camera,
+        ResolutionPreset.low,
+        enableAudio: false,
+        imageFormatGroup: ImageFormatGroup.yuv420,
+      );
+
+      await controller.initialize();
+
+      _handDetector = detector;
+      _handCamera = controller;
+      _handTracking = true;
+
+      await controller.startImageStream((image) {
+        if (!_processingHandFrame) {
+          unawaited(_processHandFrame(image, camera.sensorOrientation));
+        }
+      });
+
+      if (mounted) setState(() {});
+      await _speak("Hand tracking activated, sir.");
+    } catch (e) {
+      debugPrint("Hand tracking start error: $e");
+      await _stopHandTracking();
+      await _speak("Unable to start hand tracking, sir.");
+    }
+  }
+
+  Future<void> _processHandFrame(
+    CameraImage image,
+    int sensorOrientation,
+  ) async {
+    if (_processingHandFrame || !_handTracking) return;
+
+    _processingHandFrame = true;
+    try {
+      final detector = _handDetector;
+      if (detector == null) return;
+
+      final hands = await detector.detect(image, sensorOrientation);
+      if (hands.isEmpty || hands.first.landmarks.length < 9 || !mounted) {
+        return;
+      }
+
+      final landmarks = hands.first.landmarks;
+      final indexTip = landmarks[8];
+      final thumbTip = landmarks[4];
+
+      final dx = indexTip.x - thumbTip.x;
+      final dy = indexTip.y - thumbTip.y;
+      final pinchDistance = math.sqrt(dx * dx + dy * dy);
+
+      setState(() {
+        _hologramX = ((indexTip.x - 0.5) * 500).clamp(-220.0, 220.0);
+        _hologramY = ((indexTip.y - 0.5) * 400).clamp(-170.0, 170.0);
+        _hologramScale = (0.7 + pinchDistance * 3.0).clamp(0.7, 2.2);
+      });
+    } catch (e) {
+      debugPrint("Hand tracking frame error: $e");
+    } finally {
+      _processingHandFrame = false;
+    }
+  }
+
+  Future<void> _stopHandTracking() async {
+    _handTracking = false;
+
+    final controller = _handCamera;
+    _handCamera = null;
+    if (controller != null) {
+      try {
+        if (controller.value.isStreamingImages) {
+          await controller.stopImageStream();
+        }
+      } catch (_) {}
+      await controller.dispose();
+    }
+
+    final detector = _handDetector;
+    _handDetector = null;
+    if (detector != null) {
+      await detector.dispose();
+    }
+
+    if (mounted) setState(() {});
+  }
+
   @override
   void dispose() {
+    unawaited(_stopHandTracking());
     unawaited(_localQwen.dispose());
     _reactorController.dispose();
     _speech.stop();
@@ -356,6 +469,7 @@ class _GiantArcReactorScreenState extends State<GiantArcReactorScreen> with Tick
         _hologramImagePath = result.files.single.path;
         _isHologramActive = true;
       });
+      await _startHandTracking();
       await _speak("Hologram photo loaded, sir.");
     } catch (e) {
       debugPrint("Hologram photo error: $e");
@@ -387,9 +501,11 @@ class _GiantArcReactorScreenState extends State<GiantArcReactorScreen> with Tick
           lower.contains('hide') ||
           lower.contains('off')) {
         setState(() => _isHologramActive = false);
+        await _stopHandTracking();
         await _speak("Holographic matrix disengaged, sir.");
       } else {
         setState(() => _isHologramActive = true);
+        await _startHandTracking();
         await _speak("Holographic matrix engaged, sir.");
       }
       return;
@@ -736,11 +852,37 @@ class _GiantArcReactorScreenState extends State<GiantArcReactorScreen> with Tick
                         ),
                       ),
                       Positioned(
+                        top: 42,
+                        left: 18,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withOpacity(0.65),
+                            border: Border.all(
+                              color: _handTracking ? Colors.greenAccent : Colors.cyanAccent,
+                            ),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Text(
+                            _handTracking ? 'HAND TRACKING: ACTIVE' : 'HAND TRACKING: INACTIVE',
+                            style: TextStyle(
+                              color: _handTracking ? Colors.greenAccent : Colors.cyanAccent,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 1,
+                            ),
+                          ),
+                        ),
+                      ),
+                      Positioned(
                         top: 40,
                         right: 20,
                         child: IconButton(
                           icon: const Icon(Icons.close, color: Colors.cyanAccent, size: 32),
-                          onPressed: () => setState(() => _isHologramActive = false),
+                          onPressed: () async {
+                            setState(() => _isHologramActive = false);
+                            await _stopHandTracking();
+                          },
                         ),
                       ),
                     ],
