@@ -21,6 +21,7 @@ dependencies:
   camera: ^0.11.1
   llama_flutter_android: ^0.2.6
   file_picker: ^8.1.7
+  flutter_3d_controller: ^2.3.0
   hand_landmarker: 1.0.0
 
 dev_dependencies:
