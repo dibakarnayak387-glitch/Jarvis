@@ -829,7 +829,7 @@ class _GiantArcReactorScreenState extends State<GiantArcReactorScreen> with Tick
   if (_isHologramActive && _show3DModel && _hologramModelPath != null)
     Positioned.fill(
       child: Container(
-        color: const Color(0xEE010409),
+        color: Colors.transparent,
         child: Stack(
           children: [
             Positioned.fill(
@@ -885,7 +885,7 @@ class _GiantArcReactorScreenState extends State<GiantArcReactorScreen> with Tick
     ),
 
   // STARK HOLOGRAPHIC MATRIX VIEWER
-            if (_isHologramActive)
+            if (_isHologramActive && !_show3DModel)
               Positioned.fill(
                 child: Container(
                   color: Colors.black.withOpacity(0.9),
