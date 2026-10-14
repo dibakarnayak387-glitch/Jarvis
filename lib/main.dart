@@ -836,7 +836,7 @@ class _GiantArcReactorScreenState extends State<GiantArcReactorScreen> with Tick
               child: Flutter3DViewer(
                 key: ValueKey(_hologramModelPath),
                 controller: _hologram3DController,
-                src: _hologramModelPath!,
+                src: Uri.file(_hologramModelPath!).toString(),
                 activeGestureInterceptor: true,
                 enableTouch: true,
                 progressBarColor: Colors.cyan,
