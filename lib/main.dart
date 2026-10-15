@@ -320,9 +320,12 @@ class _GiantArcReactorScreenState extends State<GiantArcReactorScreen> with Tick
       final pinchDistance = math.sqrt(dx * dx + dy * dy);
 
       setState(() {
-        _hologramX = ((indexTip.x - 0.5) * 500).clamp(-220.0, 220.0);
-        _hologramY = ((indexTip.y - 0.5) * 400).clamp(-170.0, 170.0);
-        _hologramScale = (0.7 + pinchDistance * 3.0).clamp(0.7, 2.2);
+        final targetX = ((indexTip.x - 0.5) * 500).clamp(-220.0, 220.0);
+        final targetY = ((indexTip.y - 0.5) * 400).clamp(-170.0, 170.0);
+        final targetScale = (0.7 + pinchDistance * 3.0).clamp(0.7, 2.2);
+        _hologramX += (targetX - _hologramX) * 0.25;
+        _hologramY += (targetY - _hologramY) * 0.25;
+        _hologramScale += (targetScale - _hologramScale) * 0.25;
       });
     } catch (e) {
       debugPrint("Hand tracking frame error: $e");
