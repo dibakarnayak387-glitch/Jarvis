@@ -957,6 +957,11 @@ class _GiantArcReactorScreenState extends State<GiantArcReactorScreen> with Tick
         ),
       ),
     ),
+    ],
+  ),
+),
+);
+}
 
   Widget _metricItem(String label, String val, String sub) {
     return Column(
