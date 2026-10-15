@@ -203,7 +203,6 @@ class _GiantArcReactorScreenState extends State<GiantArcReactorScreen> with Tick
   double _lastPinchDistance = 0.0;
 
   bool _isHologramActive = false;
-  String? _hologramImagePath;
   String? _hologramModelPath;
   bool _show3DModel = false;
   final Flutter3DController _hologram3DController = Flutter3DController();
@@ -496,25 +495,6 @@ class _GiantArcReactorScreenState extends State<GiantArcReactorScreen> with Tick
     }
   }
 
-  Future<void> _pickHologramPhoto() async {
-    try {
-      final result = await FilePicker.platform.pickFiles(
-        type: FileType.image,
-      );
-      if (result == null || result.files.single.path == null) return;
-      if (!mounted) return;
-      setState(() {
-        _hologramImagePath = result.files.single.path;
-        _isHologramActive = true;
-      });
-      await _startHandTracking();
-      await _speak("Hologram photo loaded, sir.");
-    } catch (e) {
-      debugPrint("Hologram photo error: $e");
-      await _speak("Unable to load hologram photo, sir.");
-    }
-  }
-
   Future<void> _speak(String text) async {
     setState(() => _jarvisResponse = text);
     await _flutterTts.speak(text);
@@ -525,19 +505,18 @@ class _GiantArcReactorScreenState extends State<GiantArcReactorScreen> with Tick
     final lower = cmd.toLowerCase();
     setState(() => _lastCommand = cmd);
 
-    // Direct hologram commands must run before app/API routing.
+        // Unified 3D hologram model commands
     if (lower.contains('load photo') ||
         lower.contains('choose photo') ||
         lower.contains('select photo') ||
-        lower.contains('open gallery')) {
-      await _pickHologramPhoto();
-      return;
-    }
-
-    if (lower.contains('load 3d model') ||
+        lower.contains('open gallery') ||
+        lower.contains('load 3d model') ||
         lower.contains('open 3d model') ||
         lower.contains('choose 3d model') ||
-        lower.contains('select 3d model')) {
+        lower.contains('select 3d model') ||
+        lower.contains('load model') ||
+        lower.contains('choose model') ||
+        lower.contains('select model')) {
       await _pickHologramModel();
       return;
     }
@@ -887,118 +866,97 @@ class _GiantArcReactorScreenState extends State<GiantArcReactorScreen> with Tick
       ),
     ),
 
-  // STARK HOLOGRAPHIC MATRIX VIEWER
-            if (_isHologramActive && !_show3DModel)
-              Positioned.fill(
-                child: Container(
-                  color: Colors.black.withOpacity(0.9),
-                  child: Stack(
-                    children: [
-                      Center(
-                        child: Transform.translate(
-                          offset: Offset(_hologramX, _hologramY),
-                          child: Transform.scale(
-                            scale: _hologramScale,
-                            child: InteractiveViewer(
-                              minScale: 0.5,
-                              maxScale: 6.0,
-                              child: Container(
-                            width: 320,
-                            height: 320,
-                            decoration: BoxDecoration(
-                              border: Border.all(color: Colors.cyanAccent, width: 2),
-                              color: Colors.cyan.withOpacity(0.12),
-                              boxShadow: [
-                                BoxShadow(color: Colors.cyanAccent.withOpacity(0.6), blurRadius: 40),
-                              ],
-                            ),
-                            child: _hologramImagePath == null
-                                ? Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      const Icon(Icons.hexagon_outlined, size: 90, color: Colors.cyanAccent),
-                                      const SizedBox(height: 12),
-                                      const Text('STARK HOLOGRAPHIC MATRIX', style: TextStyle(color: Colors.cyanAccent, fontSize: 12, letterSpacing: 2.5, fontWeight: FontWeight.bold)),
-                                      const SizedBox(height: 6),
-                                      const Text('Pinch to zoom / Drag to move', style: TextStyle(color: Colors.grey, fontSize: 9)),
-                                      const SizedBox(height: 14),
-                                      ElevatedButton.icon(
-                                        onPressed: _pickHologramPhoto,
-                                        icon: const Icon(Icons.photo_library),
-                                        label: const Text('LOAD PHOTO'),
-                                      ),
-                                    ],
-                                  )
-                                : Stack(
-                                    fit: StackFit.expand,
-                                    children: [
-                                      Image.file(
-                                        File(_hologramImagePath!),
-                                        fit: BoxFit.contain,
-                                        errorBuilder: (context, error, stack) => const Center(
-                                          child: Text('Unable to display photo', style: TextStyle(color: Colors.cyanAccent)),
-                                        ),
-                                      ),
-                                      Positioned(
-                                        left: 8,
-                                        right: 8,
-                                        bottom: 8,
-                                        child: ElevatedButton.icon(
-                                          onPressed: _pickHologramPhoto,
-                                          icon: const Icon(Icons.photo_library),
-                                          label: const Text('CHANGE PHOTO'),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                              ),
-                            ),
-                          ),
-                        ),
+  // Unified 3D hologram model selection screen
+  // The actual 3D model is rendered by the GLB/GLTF viewer above.
+  // This screen appears when no 3D model has been selected.
+  // Keep hand tracking available for the 3D hologram.
+  // STARK 3D HOLOGRAM MODEL SELECTION
+  if (_isHologramActive && !_show3DModel)
+    Positioned.fill(
+      child: Container(
+        color: const Color(0xF2010409),
+        child: Stack(
+          children: [
+            Center(
+              child: Container(
+                width: 320,
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: Colors.cyan.withOpacity(0.08),
+                  border: Border.all(color: Colors.cyanAccent, width: 2),
+                  borderRadius: BorderRadius.circular(18),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.cyanAccent.withOpacity(0.25),
+                      blurRadius: 32,
+                    ),
+                  ],
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.view_in_ar,
+                      size: 82,
+                      color: Colors.cyanAccent,
+                    ),
+                    const SizedBox(height: 18),
+                    const Text(
+                      'STARK 3D HOLOGRAM',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: Colors.cyanAccent,
+                        fontSize: 16,
+                        letterSpacing: 2,
+                        fontWeight: FontWeight.bold,
                       ),
-                      Positioned(
-                        top: 42,
-                        left: 18,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                          decoration: BoxDecoration(
-                            color: Colors.black.withOpacity(0.65),
-                            border: Border.all(
-                              color: _handTracking ? Colors.greenAccent : Colors.cyanAccent,
-                            ),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Text(
-                            _handTracking ? 'HAND TRACKING: ACTIVE' : 'HAND TRACKING: INACTIVE',
-                            style: TextStyle(
-                              color: _handTracking ? Colors.greenAccent : Colors.cyanAccent,
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: 1,
-                            ),
-                          ),
-                        ),
+                    ),
+                    const SizedBox(height: 10),
+                    const Text(
+                      'Select a .GLB or .GLTF 3D model to begin',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Colors.white70, fontSize: 12),
+                    ),
+                    const SizedBox(height: 20),
+                    ElevatedButton.icon(
+                      onPressed: _pickHologramModel,
+                      icon: const Icon(Icons.upload_file),
+                      label: const Text('LOAD 3D MODEL'),
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      _handTracking
+                          ? 'HAND TRACKING: ACTIVE'
+                          : 'HAND TRACKING: READY',
+                      style: const TextStyle(
+                        color: Colors.cyanAccent,
+                        fontSize: 10,
+                        letterSpacing: 1,
                       ),
-                      Positioned(
-                        top: 40,
-                        right: 20,
-                        child: IconButton(
-                          icon: const Icon(Icons.close, color: Colors.cyanAccent, size: 32),
-                          onPressed: () async {
-                            setState(() => _isHologramActive = false);
-                            await _stopHandTracking();
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
+            ),
+            Positioned(
+              top: 40,
+              right: 20,
+              child: IconButton(
+                icon: const Icon(
+                  Icons.close,
+                  color: Colors.cyanAccent,
+                  size: 32,
+                ),
+                onPressed: () async {
+                  setState(() => _isHologramActive = false);
+                  await _stopHandTracking();
+                },
+              ),
+            ),
           ],
         ),
       ),
-    );
-  }
+    ),
 
   Widget _metricItem(String label, String val, String sub) {
     return Column(
