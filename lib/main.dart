@@ -525,13 +525,14 @@ class _GiantArcReactorScreenState extends State<GiantArcReactorScreen> with Tick
       if (lower.contains('close') ||
           lower.contains('hide') ||
           lower.contains('off')) {
-        setState(() => _isHologramActive = false);
+        setState(() {
+          _isHologramActive = false;
+          _show3DModel = false;
+        });
         await _stopHandTracking();
         await _speak("Holographic matrix disengaged, sir.");
       } else {
-        setState(() => _isHologramActive = true);
-        await _startHandTracking();
-        await _speak("Holographic matrix engaged, sir.");
+        await _pickHologramModel();
       }
       return;
     }
@@ -866,97 +867,6 @@ class _GiantArcReactorScreenState extends State<GiantArcReactorScreen> with Tick
       ),
     ),
 
-  // Unified 3D hologram model selection screen
-  // The actual 3D model is rendered by the GLB/GLTF viewer above.
-  // This screen appears when no 3D model has been selected.
-  // Keep hand tracking available for the 3D hologram.
-  // STARK 3D HOLOGRAM MODEL SELECTION
-  if (_isHologramActive && !_show3DModel)
-    Positioned.fill(
-      child: Container(
-        color: const Color(0xF2010409),
-        child: Stack(
-          children: [
-            Center(
-              child: Container(
-                width: 320,
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  color: Colors.cyan.withOpacity(0.08),
-                  border: Border.all(color: Colors.cyanAccent, width: 2),
-                  borderRadius: BorderRadius.circular(18),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.cyanAccent.withOpacity(0.25),
-                      blurRadius: 32,
-                    ),
-                  ],
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(
-                      Icons.view_in_ar,
-                      size: 82,
-                      color: Colors.cyanAccent,
-                    ),
-                    const SizedBox(height: 18),
-                    const Text(
-                      'STARK 3D HOLOGRAM',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: Colors.cyanAccent,
-                        fontSize: 16,
-                        letterSpacing: 2,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    const Text(
-                      'Select a .GLB or .GLTF 3D model to begin',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: Colors.white70, fontSize: 12),
-                    ),
-                    const SizedBox(height: 20),
-                    ElevatedButton.icon(
-                      onPressed: _pickHologramModel,
-                      icon: const Icon(Icons.upload_file),
-                      label: const Text('LOAD 3D MODEL'),
-                    ),
-                    const SizedBox(height: 10),
-                    Text(
-                      _handTracking
-                          ? 'HAND TRACKING: ACTIVE'
-                          : 'HAND TRACKING: READY',
-                      style: const TextStyle(
-                        color: Colors.cyanAccent,
-                        fontSize: 10,
-                        letterSpacing: 1,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            Positioned(
-              top: 40,
-              right: 20,
-              child: IconButton(
-                icon: const Icon(
-                  Icons.close,
-                  color: Colors.cyanAccent,
-                  size: 32,
-                ),
-                onPressed: () async {
-                  setState(() => _isHologramActive = false);
-                  await _stopHandTracking();
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
-    ),
     ],
   ),
 ),
